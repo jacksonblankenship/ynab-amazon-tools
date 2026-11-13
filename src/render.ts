@@ -18,6 +18,18 @@ export const short = (t: string) =>
 const chargeLabel = (c: Txn) =>
   `${fmt(c.amount)} on ${c.date || "unknown date"}${c.status && !/completed|charged|refunded/i.test(c.status) ? ` (${esc(c.status)})` : ""}`;
 
+/** What paid the part of a delivery its card charges fell short by, when the matcher can tell. */
+function shortBy(solution: Solution, gi: number): string {
+  const absorbed = must(solution.absorbedBy[gi], `credit for group ${gi}`);
+  const coupon = solution.couponBy ? (solution.couponBy[gi] ?? 0) : null;
+  if (coupon == null) return `${fmt(absorbed)} was paid with points, a gift card or a coupon`;
+  if (!coupon) return `${fmt(absorbed)} was paid with points or a gift card`;
+  // The coupon was spread over every delivery in the estimates, but Amazon gave it to this one.
+  const byCoupon = `${fmt(coupon)} more came off with a coupon than estimated`;
+  const credit = absorbed - coupon;
+  return credit ? `${fmt(credit)} was paid with points or a gift card, and ${byCoupon}` : byCoupon;
+}
+
 /** The delivery's whole card on the page, to outline; the box itself if it has none of its own. */
 export const card = (box: Element) => {
   const c = box.closest(".a-box");
@@ -151,7 +163,7 @@ export function renderOrder(order: Order, result: RenderResult, lead: Node[] = [
         el(
           "div",
           "acs-muted",
-          `${fmt(absorbed)} was paid with points or a gift card, so the card paid less than the items' price.`,
+          `${shortBy(solution, gi)}, so the card paid less than the items' price.`,
         ),
       );
     for (const s of splitGroup(items, groupCharges, absorbed))
@@ -259,13 +271,7 @@ export function renderFocus(
     );
   }
   if (absorbed > 0) {
-    body.push(
-      el(
-        "div",
-        "acs-muted",
-        `${fmt(absorbed)} of this delivery was paid with points or a gift card.`,
-      ),
-    );
+    body.push(el("div", "acs-muted", `On this delivery, ${shortBy(solution, gi)}.`));
   }
   body.push(splitTable(split, false));
   for (const w of warnings) body.push(el("div", "acs-warn", esc(w)));
