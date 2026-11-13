@@ -50,8 +50,11 @@ function store(c: Cache) {
 
 export const today = () => Math.round(new Date().setHours(0, 0, 0, 0) / DAY);
 
-// Not the status: a pending charge seen again once charged replaces itself.
-const key = (r: Stored) => [r.orderIds.join(","), r.amount, r.date, r.kind, r.method].join("|");
+// Not the status: a pending charge seen again once charged replaces itself. The day, not the
+// date as written: the transactions page says "Nov 08, 2026" where an order's own list says
+// "November 8, 2026", and the same charge mustn't be kept (and offered) twice.
+const key = (r: Stored) =>
+  [r.orderIds.join(","), r.amount, toDay(r.date) ?? r.date, r.kind, r.method].join("|");
 
 /** These rows, then every transaction seen so far that isn't one of them. */
 export function withCached(rows: Txn[]): Txn[] {
