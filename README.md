@@ -42,8 +42,8 @@ you're already signed in to. It never sees your passwords.
 - **It talks only to Amazon and YNAB.** There's no server behind it, no
   analytics, and no tracking.
 - **It stores some data in Tampermonkey, on your computer.** It keeps the Amazon
-  transactions it has seen (amount, date, order number, and card name with its
-  last 4 digits) so it doesn't ask Amazon twice. It also keeps a log of when it
+  transactions it has seen (amount, date, order number, status, and card name
+  with its last 4 digits) so it doesn't ask Amazon twice. It also keeps a log of when it
   loaded data from Amazon, and passes a refund's order details to your YNAB tab
   the same way. Saved transactions are cleared when you sign in to a different
   Amazon account, or any time with **Forget saved Amazon transactions** in
