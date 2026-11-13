@@ -171,27 +171,31 @@ export async function answerRefund(panel: HTMLElement, t: Trace, plan: string | 
 // memos, payees, accounts or plan names.
 function amazonAnswer(l: RefundLookup, t: Trace): HTMLElement[] {
   const answer = refundAnswer(l, t.refund.amount);
-  if (answer)
-    return ["put" in answer ? line("acs-put", answer.put) : line("acs-warn", answer.warn)];
-  return l.charges.map(({ charge: c }) =>
-    line(
-      "acs-warn",
-      `Couldn't find the ${fmt(c.amount)} charge from ${c.date || "this order"} in YNAB. It may be in another plan, or entered with a different amount.`,
-    ),
-  );
+  // With no charge found, the cautions say why.
+  if (!answer) return [];
+  return ["put" in answer ? line("acs-put", answer.put) : line("acs-warn", answer.warn)];
 }
+
+/** A charge of the order's that YNAB doesn't have: shown in either tab, never left behind. */
+export const notInYnab = (c: Trace["charges"][number]) =>
+  line(
+    "acs-warn",
+    `No ${fmt(c.amount)} Amazon charge in YNAB within a week of ${c.date || "the Amazon date"}. It may be in another plan, or entered with a different amount.`,
+  );
 
 /** What makes the answer less sure, shown with it. */
 function cautions(l: RefundLookup): HTMLElement[] {
   const nodes = l.charges.flatMap(({ charge: c, found: x }) =>
-    x?.alt
-      ? [
-          line(
-            "acs-warn",
-            `YNAB has another ${fmt(c.amount)} Amazon charge near this date, in ${x.alt.categories.join(", ") || "no category"}. Either may be this order's.`,
-          ),
-        ]
-      : [],
+    !x
+      ? [notInYnab(c)]
+      : x.alt
+        ? [
+            line(
+              "acs-warn",
+              `YNAB has another ${fmt(c.amount)} Amazon charge near this date, in ${x.alt.categories.join(", ") || "no category"}. Either may be this order's.`,
+            ),
+          ]
+        : [],
   );
   if (l.limited)
     nodes.push(line("acs-warn", "YNAB is limiting requests, so other plans weren't checked."));

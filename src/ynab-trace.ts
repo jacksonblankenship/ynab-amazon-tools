@@ -8,7 +8,7 @@ import { fmt } from "./lib/money.ts";
 import { resultPanel } from "./lib/result-panel.ts";
 import { reportLine } from "./lib/suite.ts";
 import { suite } from "./overlay.ts";
-import { howItMatched, refundHint, TRACE_KEY } from "./refund.ts";
+import { howItMatched, notInYnab, refundHint, TRACE_KEY } from "./refund.ts";
 import { short } from "./render.ts";
 import type { RefundLookup, Trace } from "./types.ts";
 import { lookUpRefund, planIn, refundAnswer, TOKEN_KEY } from "./ynab-lookup.ts";
@@ -61,13 +61,7 @@ function describeMatch({ charge: c, found: x }: RefundLookup["charges"][number])
 
 /** What can't be left behind "How it matched": a charge not found, or found twice. */
 function cautions({ charge: c, found: x }: RefundLookup["charges"][number]): HTMLElement[] {
-  if (!x)
-    return [
-      line(
-        "acs-warn",
-        `No ${fmt(c.amount)} Amazon charge in YNAB within a week of ${c.date || "the Amazon date"}. It may be in another plan, or entered with a different amount.`,
-      ),
-    ];
+  if (!x) return [notInYnab(c)];
   if (!x.alt) return [];
   return [
     line(

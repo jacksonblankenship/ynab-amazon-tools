@@ -237,7 +237,8 @@ export async function lookUpRefund(
 
 /**
  * The answer line: the category the refund goes back to, or the categories it may go back to.
- * Null when no charge was found, since then there's nothing to answer from.
+ * Null when no charge was found, since then there's nothing to answer from. Only a guess when
+ * one of the order's charges wasn't found: the refund may be for that one.
  */
 export function refundAnswer(
   l: RefundLookup,
@@ -257,7 +258,9 @@ export function refundAnswer(
   const all = hits.length === 1 ? hits : [...new Set(cats.filter(Boolean))];
   const [one] = all;
   if (!one) return { warn: "None of these charges are categorized in YNAB yet." };
-  if (all.length === 1) return { put: `Put ${fmt(amount)} back in ${one}.` };
+  const missing = l.charges.some((c) => !c.found);
+  if (all.length === 1)
+    return { put: missing ? `Probably ${one}.` : `Put ${fmt(amount)} back in ${one}.` };
   // Said once, in the answer: which of these is for the user to tell.
   return { put: `Probably ${all.slice(0, -1).join(", ")} or ${all.at(-1)}.` };
 }

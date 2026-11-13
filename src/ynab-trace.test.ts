@@ -183,6 +183,20 @@ describe("the refund's original charge and category", () => {
     expect(advice()).toMatch(/Household/);
   });
 
+  test("with one of the order's charges not in YNAB, no category is claimed outright", async () => {
+    openYnab((r) =>
+      r.url.endsWith("/v1/plans") ? { status: 200, body: { data: { plans: [] } } } : ok(planTxns()),
+    );
+    const base = refundTrace();
+    await handOver({
+      ...base,
+      charges: [...base.charges, { amount: 1234, date: "August 20, 2026", method: "Visa" }],
+    });
+    expect(panelText()).toMatch(/No \$12\.34 Amazon charge in YNAB/);
+    expect(advice()).toMatch(/Fun Money A/);
+    expect(advice()).not.toMatch(/^Put/);
+  });
+
   test("an $80.08 Amazon inflow inside the window is never taken as the charge", async () => {
     const onlyInflow = planTxns().filter((t) => t.id !== AUG_21 && t.id !== AUG_23);
     onlyInflow.push(extraTxn({ date: "2026-08-21", amount: 80080, category_name: "Wrong" }));
@@ -441,6 +455,26 @@ describe("the refund's category on the Amazon page", () => {
     };
     await answerOnAmazon(() => ok(planTxns(byId(AUG_21, split)).filter((t) => t.id !== AUG_23)));
     expect(advice()).toBe("Put $68.64 back in Baby.");
+  });
+
+  test("with one of the order's charges not in YNAB, it says so and claims no category", async () => {
+    const base = refundTrace();
+    const trace = {
+      ...base,
+      charges: [...base.charges, { amount: 1234, date: "August 20, 2026", method: "Visa" }],
+    };
+    const p = await answerOnAmazon(
+      (r) =>
+        r.url.endsWith("/v1/plans")
+          ? { status: 200, body: { data: { plans: [] } } }
+          : ok(planTxns()),
+      { trace },
+    );
+    expect(p.textContent).toMatch(
+      /No \$12\.34 Amazon charge in YNAB within a week of August 20, 2026/,
+    );
+    expect(advice()).toMatch(/Fun Money A/);
+    expect(advice()).not.toMatch(/^Put/);
   });
 
   test("shows only categories and amounts from YNAB: no memo, account or plan name", async () => {
