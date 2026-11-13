@@ -40,8 +40,16 @@ export async function orderPage() {
   // Cancelled while the charges loaded: leave the page as it is.
   if (search.aborted) {
     shown.panel.remove();
+    launcher(parsed);
     return;
   }
+  // Only now, so a cancelled lookup doesn't reach the YNAB tab.
+  if (shown.trace)
+    try {
+      GM_setValue(TRACE_KEY, shown.trace);
+    } catch {
+      /* ignore */
+    }
   const cards = shown.boxes.map(card);
   const top = Math.min(...cards.map((c) => c.getBoundingClientRect().top));
   if (Number.isFinite(top)) window.scrollTo({ top: window.scrollY + top - 16 });
@@ -84,6 +92,11 @@ async function match(parsed: ParsedOrder, focus: Focus | null): Promise<Shown> {
   const { solution, incomplete } = charges.length
     ? solve(order.shipments, charges, credit)
     : { solution: null, incomplete: false };
+  // The match leaned on a guess at this order's share: say so, it could be off.
+  if (shared && solution?.absorbedBy.some((a) => a > 0))
+    warnings.push(
+      "Part of this order was paid with points or a gift card shared with another order. Amazon doesn't say how much went to each, so the amounts below assume the share that fits.",
+    );
   if (incomplete) {
     warnings.push(
       solution
@@ -108,12 +121,7 @@ async function match(parsed: ParsedOrder, focus: Focus | null): Promise<Shown> {
   const refund = focus && nearest(sameRefunds, (r) => r.date, focus.date);
   if (refund) {
     const trace = traceRefund(order, charges, refund);
-    try {
-      GM_setValue(TRACE_KEY, trace);
-    } catch {
-      /* ignore */
-    }
-    return { panel: refundPanel(trace), boxes: [], landed: () => {} };
+    return { panel: refundPanel(trace), boxes: [], landed: () => {}, trace };
   }
   // The one asked about couldn't be pinned down: say so above the whole order.
   const lead = focus

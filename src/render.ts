@@ -9,7 +9,7 @@ import { resultPanel } from "./lib/result-panel.ts";
 import { reportLine } from "./lib/suite.ts";
 import { splitGroup } from "./matcher.ts";
 import { suite } from "./overlay.ts";
-import type { Focus, Order, RenderResult, Solution, Split, Txn } from "./types.ts";
+import type { Focus, Order, RenderResult, Solution, Split, Trace, Txn } from "./types.ts";
 
 const CHANGED = "Amazon may have changed this page.";
 
@@ -54,6 +54,8 @@ export interface Shown {
   panel: HTMLElement;
   boxes: Element[];
   landed: () => void;
+  /** A refund's trace, for the YNAB tab. */
+  trace?: Trace;
 }
 
 /** A floating panel whose outline on the page goes away with it. */
@@ -72,6 +74,8 @@ function floating(o: Parameters<typeof resultPanel>[1], boxes: Element[]): Shown
     panel,
     boxes,
     landed: () => {
+      // Closed before it finished landing: nothing to point from.
+      if (!panel.isConnected) return;
       ring?.remove();
       if (boxes.length) ring = highlight(suite.prefix, boxes.map(card));
     },
