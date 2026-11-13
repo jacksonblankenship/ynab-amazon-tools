@@ -386,6 +386,9 @@ a.pfx-report {
   z-index: 2147483646;
   width: 360px;
   max-width: calc(100vw - 32px);
+  /* Pinned to the viewport, so a long trace or log scrolls inside it instead of off the bottom. */
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
   margin: 0;
 }
 .pfx-result.pfx-landing {
