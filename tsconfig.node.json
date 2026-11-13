@@ -1,5 +1,5 @@
 {
-  // vite.config.ts runs at build time under Node, not in the browser.
+  // vite.config.ts and vitest.config.ts run at build time under Node, not in the browser.
   "extends": "@tsconfig/strictest/tsconfig.json",
   "compilerOptions": {
     "target": "ESNext",
@@ -11,5 +11,5 @@
     "verbatimModuleSyntax": true,
     "noEmit": true
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.ts", "vitest.config.ts"]
 }

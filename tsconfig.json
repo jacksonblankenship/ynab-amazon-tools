@@ -14,5 +14,7 @@
     "verbatimModuleSyntax": true,
     "noEmit": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Tests are checked by tsconfig.test.json.
+  "exclude": ["src/**/*.test.ts"]
 }

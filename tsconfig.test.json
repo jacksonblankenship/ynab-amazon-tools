@@ -1,0 +1,7 @@
+{
+  // Tests and their helpers. Same DOM-only setup as tsconfig.json; tests import their APIs
+  // from "vitest" explicitly, so no global test types are needed.
+  "extends": "./tsconfig.json",
+  "include": ["src", "test"],
+  "exclude": []
+}

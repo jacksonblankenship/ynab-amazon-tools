@@ -12,15 +12,19 @@
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "build": "vite build",
-    "typecheck": "tsc -p . && tsc -p tsconfig.node.json"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p . && tsc -p tsconfig.test.json && tsc -p tsconfig.node.json"
   },
   "devDependencies": {
     "@tsconfig/strictest": "^2.0.9",
+    "jsdom": "^30.1.3",
     "oxfmt": "^0.78.0",
     "oxlint": "^1.93.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
-    "vite-plugin-monkey": "^8.1.1"
+    "vite-plugin-monkey": "^8.1.1",
+    "vitest": "^5.1.0"
   },
   "packageManager": "pnpm@12.18.0"
 }
