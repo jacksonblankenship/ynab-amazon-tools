@@ -7,7 +7,7 @@ import { fmt } from "./lib/money.ts";
 import { sleep, until } from "./lib/spa.ts";
 import { parseOrder } from "./order.ts";
 import { FIND_KEY, overlay, overlayFound, overlayStop, signal } from "./overlay.ts";
-import { logRequest, requestLog } from "./request-log.ts";
+import { isRefusal, logRequest, requestLog } from "./request-log.ts";
 import { leaves } from "./scrape.ts";
 import {
   cardsUnreadable,
@@ -273,10 +273,7 @@ export async function transactionsPage() {
     );
 
   // Older rows cost requests from the allowance; don't spend one inside a recent refusal.
-  const refusedAt =
-    requestLog()
-      .filter((e) => e.status === 429)
-      .at(-1)?.at ?? 0;
+  const refusedAt = requestLog().filter(isRefusal).at(-1)?.at ?? 0;
   if (Date.now() - refusedAt < COOLDOWN_MS) {
     const again = new Date(refusedAt + COOLDOWN_MS).toLocaleTimeString([], {
       hour: "numeric",
