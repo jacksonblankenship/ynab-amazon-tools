@@ -23,7 +23,8 @@
   color: #6d5600;
   font-size: 13px;
 }
-.acs-answer {
+/* Only the answer itself is large; waiting and error lines in its place keep their own look. */
+.acs-answer > .acs-put {
   font-size: 15px;
   font-weight: 700;
 }
@@ -33,6 +34,7 @@
   padding-top: 0;
   border-top: 0;
 }
+/* "How it matched": supporting detail, so a quiet, muted summary. */
 .acs-how {
   margin-top: 10px;
   color: #51504d;
@@ -40,9 +42,11 @@
 }
 .acs-how summary {
   width: fit-content;
-  color: #475afa;
-  font-weight: 600;
+  color: #51504d;
   cursor: pointer;
+}
+.acs-how[open] summary {
+  margin-bottom: 4px;
 }
 .acs-how > div {
   margin-top: 4px;
@@ -224,15 +228,4 @@
 .acs-launch:focus-visible {
   outline: 2px solid #191818;
   outline-offset: 2px;
-}
-.acs-how {
-  margin-top: 10px;
-  font-size: 13px;
-}
-.acs-how summary {
-  color: #51504d;
-  cursor: pointer;
-}
-.acs-how[open] summary {
-  margin-bottom: 4px;
 }

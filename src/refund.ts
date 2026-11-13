@@ -7,7 +7,7 @@ import { errMsg, must } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
 import { resultPanel } from "./lib/result-panel.ts";
 import { suite } from "./overlay.ts";
-import { short } from "./render.ts";
+import { howItMatched, short } from "./render.ts";
 import type { Order, PricedItem, RefundLookup, Trace, Txn } from "./types.ts";
 import { type LookupResult, lookUpRefund, refundAnswer, TOKEN_KEY } from "./ynab-lookup.ts";
 
@@ -88,13 +88,6 @@ export function traceRefund(order: Order, charges: Txn[], refund: Txn): Trace {
 export function refundHint(t: Trace): HTMLElement[] {
   const [only, ...more] = t.itemSets;
   return only && !more.length ? [line("acs-muted", `Probably for: ${itemNames(only)}`)] : [];
-}
-
-/** What an answer rests on, collapsed: users only need it when the answer looks wrong. */
-export function howItMatched(nodes: Node[]) {
-  const how = el("details", "acs-how");
-  how.append(el("summary", null, "How it matched"), ...nodes);
-  return how;
 }
 
 /** The refund's panel, floating over the order page. answerRefund fills in its answer. */

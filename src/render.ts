@@ -105,8 +105,11 @@ function paidLess(solution: Solution, gi: number): string {
   return `Amounts are after ${fmt(absorbed)} from ${from}.`;
 }
 
-/** Supporting detail, closed until asked for: what the answer above rests on. */
-function howItMatched(nodes: Node[]) {
+/**
+ * What an answer rests on, closed until asked for: users only need it when the answer looks
+ * wrong. Shared by every panel, in either tab.
+ */
+export function howItMatched(nodes: Node[]) {
   const d = el("details", "acs-how");
   d.append(el("summary", null, "How it matched"), ...nodes);
   return d;

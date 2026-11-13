@@ -8,8 +8,8 @@ import { fmt } from "./lib/money.ts";
 import { resultPanel } from "./lib/result-panel.ts";
 import { reportLine } from "./lib/suite.ts";
 import { suite } from "./overlay.ts";
-import { howItMatched, notInYnab, refundHint, TRACE_KEY } from "./refund.ts";
-import { short } from "./render.ts";
+import { notInYnab, refundHint, TRACE_KEY } from "./refund.ts";
+import { howItMatched, short } from "./render.ts";
 import type { LookupError, RefundLookup, Trace } from "./types.ts";
 import { lookUpRefund, planIn, refundAnswer, TOKEN_KEY } from "./ynab-lookup.ts";
 

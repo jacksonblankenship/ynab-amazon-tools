@@ -1,7 +1,8 @@
 // The order page's panels: what they lead with, and what waits behind "How it matched".
 // Orders are built by hand so each case (one item, several charges, points) is exact.
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { renderFocus, renderOrder } from "./render.ts";
+import { howItMatched, renderFocus, renderOrder } from "./render.ts";
+import css from "./style.css?raw";
 import type { Focus, Order, PricedItem, Solution, Txn } from "./types.ts";
 
 const item = (title: string, total: number, shipment = 0): PricedItem => ({
@@ -297,5 +298,27 @@ describe("the whole-order panel", () => {
     expect(matched(panel)).toMatch(/Amazon Gift Card \$5\.00/);
     expect(matched(panel)).toMatch(/\$10\.00 on January 12, 2026/);
     expect(panel.querySelector("details a")?.getAttribute("href")).toMatch(/111-1111111-1111111/);
+  });
+});
+
+describe('"How it matched" and the refund answer\'s look', () => {
+  test("one helper makes the disclosure, closed until asked for", () => {
+    const how = howItMatched([document.createTextNode("detail")]);
+    expect(how.tagName).toBe("DETAILS");
+    expect(how.className).toBe("acs-how");
+    expect(how.open).toBe(false);
+    expect(how.querySelector("summary")?.textContent).toBe("How it matched");
+  });
+
+  test("its style is defined once, with a muted summary that isn't bold", () => {
+    expect(css.match(/^\.acs-how \{/gm)).toHaveLength(1);
+    const summary = css.match(/^\.acs-how summary \{([^}]*)\}/m)?.[1] ?? "";
+    expect(summary).toMatch(/color: #51504d/);
+    expect(summary).not.toMatch(/font-weight/);
+  });
+
+  test("a refund's waiting or error line isn't drawn in the answer's large bold", () => {
+    const answer = css.match(/^\.acs-answer \{([^}]*)\}/m)?.[1] ?? "";
+    expect(answer).not.toMatch(/font-weight|font-size/);
   });
 });
