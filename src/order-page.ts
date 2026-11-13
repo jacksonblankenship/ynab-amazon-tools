@@ -38,7 +38,11 @@ export async function orderPage() {
     unreadable();
     return;
   }
-  if (focus) overlayFound(`Found ${fmt(focus.amount)}`, "Finding the items it paid for");
+  if (focus)
+    overlayFound(
+      `Found ${fmt(focus.amount)}`,
+      focus.kind === "refund" ? "Finding what it refunded" : "Finding the items it paid for",
+    );
   const priced = priceItems(parsed);
   const { order, warnings } = priced;
   let { changed } = priced;
@@ -78,8 +82,11 @@ export async function orderPage() {
       "Some charges didn't match a delivery cleanly (item-specific coupons or a partial refund can cause this). Unmatched amounts are flagged.",
     );
   }
+  // A refund often equals one of the order's charges; it's still the refund being traced.
   const shown =
-    focus && solution && renderFocus(order, charges, solution, focus, warnings, changed);
+    focus?.kind === "charge" &&
+    solution &&
+    renderFocus(order, charges, solution, focus, warnings, changed);
   if (shown) {
     const cards = shown.boxes.map(card);
     const top = Math.min(...cards.map((c) => c.getBoundingClientRect().top));
@@ -91,7 +98,8 @@ export async function orderPage() {
   }
   render(order, { charges, credits, refunds, solution, warnings, error, changed });
   // Opened from a YNAB refund: show it, and hand its trace to the YNAB tab.
-  const sameRefunds = focus && !error ? refunds.filter((r) => r.amount === focus.amount) : [];
+  const sameRefunds =
+    focus?.kind === "refund" && !error ? refunds.filter((r) => r.amount === focus.amount) : [];
   const refund = focus && nearest(sameRefunds, (r) => r.date, focus.date);
   if (refund) {
     const trace = traceRefund(order, charges, refund);
@@ -107,7 +115,11 @@ export async function orderPage() {
   }
   if (focus) {
     overlayStop(
-      error ? "Couldn't read Amazon's charges" : `Couldn't tie ${fmt(focus.amount)} to a delivery`,
+      error
+        ? "Couldn't read Amazon's charges"
+        : focus.kind === "refund"
+          ? `Couldn't find the ${fmt(focus.amount)} refund on this order`
+          : `Couldn't tie ${fmt(focus.amount)} to a delivery`,
       `${error ? `${error}. ` : ""}Showing the full breakdown for this order instead.`,
       [],
       { report: changed },
@@ -115,9 +127,10 @@ export async function orderPage() {
   }
 }
 
-/** Order page opened from YNAB: #acs-charge=1999&acs-on=January%205%2C%202026 */
+/** Order page opened from YNAB: #acs-charge=1999&acs-on=January%205%2C%202026[&acs-kind=refund] */
 export function focusTarget(): Focus | null {
   const h = new URLSearchParams(location.hash.slice(1));
   const amount = Number(h.get("acs-charge"));
-  return amount ? { amount, date: h.get("acs-on") || "" } : null;
+  const kind = h.get("acs-kind") === "refund" ? "refund" : "charge";
+  return amount ? { amount, date: h.get("acs-on") || "", kind } : null;
 }

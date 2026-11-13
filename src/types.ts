@@ -107,6 +107,7 @@ export interface RenderResult {
 export interface Focus {
   amount: number;
   date: string;
+  kind: "charge" | "refund";
 }
 
 export interface FindQuery {

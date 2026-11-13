@@ -210,7 +210,7 @@ export async function transactionsPage() {
     const orderUrl = (r: Txn) =>
       isDigitalOrder(r.orderId)
         ? digitalOrderUrl(r.orderId)
-        : `/your-orders/order-details?orderID=${r.orderId}#acs-charge=${r.amount}&acs-on=${encodeURIComponent(r.date)}`;
+        : `/your-orders/order-details?orderID=${r.orderId}#acs-charge=${r.amount}&acs-on=${encodeURIComponent(r.date)}${r.kind === "refund" ? "&acs-kind=refund" : ""}`;
     const best = hits.filter((r) => r.diff === closest.diff && r.orderId);
     const orders = [...new Set(best.map((r) => r.orderId))];
     const [first] = best;
