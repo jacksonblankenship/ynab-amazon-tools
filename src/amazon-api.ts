@@ -3,6 +3,7 @@
 // that answers 429 once spent. Asking it directly allows far bigger pages, and a refunds-only
 // list when the search is for a refund, so one request usually does what many scrolls did.
 // Every field the request needs is in the page's own startup data (__NEXT_DATA__).
+import { GM_getValue, GM_setValue } from "$";
 import { errMsg, must } from "./lib/errors.ts";
 import { cents, fmt } from "./lib/money.ts";
 import { sleep } from "./lib/spa.ts";
@@ -14,6 +15,28 @@ import type { FindQuery, Txn } from "./types.ts";
 const API_PATH = "/payments-portal/data/iris/live/v1/data/manage/get-transactions";
 const API_PAGE = 100;
 const API_MAX = 10;
+// When the service answers in a shape this can't read, asking again soon only wastes a request.
+// The key carries the shape's version, so a script that reads a new shape tries again at once.
+const UNUSABLE_KEY = "acs-api-unusable-v2";
+const UNUSABLE_MS = 864e5;
+
+const unusableRecently = () => {
+  try {
+    const at: unknown = GM_getValue(UNUSABLE_KEY, 0);
+    return typeof at === "number" && Date.now() - at < UNUSABLE_MS;
+  } catch {
+    return false;
+  }
+};
+function markUnusable(why: string, status: number): { unusable: true } {
+  logRequest("api", `${status}, ${why}`);
+  try {
+    GM_setValue(UNUSABLE_KEY, Date.now());
+  } catch {
+    /* ignore */
+  }
+  return { unusable: true };
+}
 
 // Amazon answers fast loading with 429s, so ask for more no faster than a person scrolls.
 export const pace = () => sleep(1500 + Math.random() * 1000);
@@ -146,13 +169,14 @@ export async function apiSearch<H>(
   const props = pageProps();
   const token = props?.token;
   const ctx = props?.manageWalletRequest?.requestContext;
-  if (typeof token !== "string" || !props || !ctx) return { unusable: true };
+  if (typeof token !== "string" || !props || !ctx || unusableRecently()) return { unusable: true };
   const refundsOnly = q.kind === "refund";
   // A refunds-only list starts from the top; otherwise carry on below the rows the page came with.
   let cursor: unknown = refundsOnly
     ? undefined
     : props.state?.transactionResponseState?.lastEvaluatedPageKey;
-  if (!refundsOnly && !cursor) return { done: true, checked: 0 };
+  // Without a bookmark there's no telling where the page's rows stop: not the end, just unknown.
+  if (!refundsOnly && (typeof cursor !== "string" || !cursor)) return { unusable: true };
   const seen: Txn[] = [];
   for (let n = 0; n < API_MAX; n++) {
     if (n) await pace();
@@ -178,26 +202,41 @@ export async function apiSearch<H>(
       logRequest("api", `not sent: ${errMsg(e)}`);
       return { unusable: true };
     }
-    if (res.status === 429) {
-      logRequest("api", 429);
+    // A 503 or other error is Amazon holding back as much as a 429 is; scrolling would only add to it.
+    if (!res.ok) {
+      logRequest("api", res.status);
       return { throttled: true, checked: seen.length };
     }
-    const json: unknown = res.ok ? await res.json().catch(() => null) : null;
-    const list = findKey(json, /^transactionList$/);
-    logRequest("api", Array.isArray(list) ? res.status : `${res.status}, unreadable answer`);
-    if (!Array.isArray(list)) return { unusable: true };
-    seen.push(
-      ...list.flatMap((t: ApiTxn) => {
-        const row = apiRow(t);
-        return row ? [row] : [];
-      }),
-    );
+    const json: unknown = await res.json().catch(() => null);
+    // "transactionsList" since late 2026; "transactionList" before.
+    const list = findKey(json, /^transactions?List$/);
+    if (!Array.isArray(list)) return markUnusable("unreadable answer", res.status);
+    const rows = list.flatMap((t: ApiTxn) => {
+      const row = apiRow(t);
+      return row ? [row] : [];
+    });
+    if (list.length && !rows.length) return markUnusable("unreadable rows", res.status);
+    // Without card digits every charge would read as a gift card or points payment.
+    if (
+      list.length &&
+      !list.some((t: ApiTxn) => t.paymentMethodDisplayStringData?.paymentMethodNumber?.lastDigits)
+    )
+      return markUnusable("unreadable cards", res.status);
+    logRequest("api", res.status);
+    seen.push(...rows);
     const { hits, past } = check(seen);
     if (hits.length) return { hits };
     if (past) return { done: true, past: true, checked: seen.length };
+    // The last page comes without a bookmark; one of another kind is a shape this can't follow.
     cursor = findKey(json, /^lastEvaluated/);
-    if (typeof cursor !== "string" || !cursor || findKey(json, /^hasMore$/) === false)
+    if (
+      cursor === undefined ||
+      cursor === null ||
+      cursor === "" ||
+      findKey(json, /^hasMore$/) === false
+    )
       return { done: true, checked: seen.length };
+    if (typeof cursor !== "string") return markUnusable("unreadable bookmark", res.status);
   }
   return { done: true, limit: true, checked: seen.length };
 }
