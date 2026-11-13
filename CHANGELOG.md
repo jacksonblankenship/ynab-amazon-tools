@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/jacksonblankenship/ynab-amazon-tools/compare/v0.2.1...v0.3.0) (2026-11-13)
+
+
+### Features
+
+* give the script an icon and an author ([10e68a3](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/10e68a35cfdafe0b6ed3cc64b5281680cde3192f))
+
+
+### Bug Fixes
+
+* declare the update url tampermonkey checks for new versions ([7eda9e3](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/7eda9e3748aa281f19fefab98f6540de40337e95))
+* say how long to wait when amazon may be limiting requests ([7315b7f](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/7315b7f666a311a8f0c1bf52997557b8b4fc8791))
+
 ## [0.2.1](https://github.com/jacksonblankenship/ynab-amazon-tools/compare/v0.2.0...v0.2.1) (2026-11-13)
 
 
