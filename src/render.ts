@@ -133,8 +133,11 @@ const splitHead = (split: Split, multi: boolean) =>
   `${multi ? `<b>${fmt(split.charge.amount)}</b> charge` : "Items"}` +
   `${split.exact ? "" : ' <span class="acs-muted">(Amazon didn\'t say which items, so each item gets its share of this charge)</span>'}`;
 
-/** One line on what made the card pay less than the items' price, for under the amounts. */
-function paidLess(solution: Solution, gi: number): string {
+/**
+ * One line on what made the card pay less than the items' price, for under the amounts; for
+ * a single item, which is shown without one, about its price.
+ */
+function paidLess(solution: Solution, gi: number, single = false): string {
   const absorbed = must(solution.absorbedBy[gi], `credit for group ${gi}`);
   const coupon = solution.couponBy ? (solution.couponBy[gi] ?? 0) : null;
   const from =
@@ -145,7 +148,9 @@ function paidLess(solution: Solution, gi: number): string {
         : coupon
           ? "points or a gift card, and a coupon"
           : "points or a gift card";
-  return `Amounts are after ${fmt(absorbed)} from ${from}.`;
+  return single
+    ? `The card paid ${fmt(absorbed)} less than the item's price; that came from ${from}.`
+    : `Amounts are after ${fmt(absorbed)} from ${from}.`;
 }
 
 /**
@@ -391,7 +396,7 @@ export function renderFocus(
     copyOnClick(memo, split.lines.map((l) => short(l.item.title)).join(", "));
     body.push(memo);
   }
-  if (absorbed > 0) body.push(line("acs-muted", paidLess(solution, gi)));
+  if (absorbed > 0) body.push(line("acs-muted", paidLess(solution, gi, !!one)));
   if (!split.exact) body.push(line("acs-warn", ESTIMATED));
   for (const w of warnings) body.push(el("div", "acs-warn", esc(w)));
   if (changed) body.push(reportLine(suite, "acs-warn", CHANGED));

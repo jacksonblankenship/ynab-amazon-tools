@@ -161,6 +161,17 @@ describe("the single-charge panel", () => {
     expect(matched(panel)).toMatch(/\$5\.00 was paid with points or a gift card/);
   });
 
+  test("one item bought partly with points talks about it, not about amounts not shown", () => {
+    const { order: o, solve } = order([[item("Huggies Size 3 Diapers", 2732)]], 0);
+    const charges = [charge(2232, "January 4, 2026")];
+    const panel = renderFocus(o, charges, solve(charges, 500), {
+      ...focus,
+      amount: 2232,
+    })?.panel as HTMLElement;
+    expect(visible(panel)).not.toMatch(/amounts/i);
+    expect(visible(panel)).toMatch(/\$5\.00 less than the item's price.*gift card/);
+  });
+
   test("a coupon isn't called points or a gift card", () => {
     const { order: o, solve } = order([[diapers, wipes]], 0);
     const charges = [charge(2232, "January 4, 2026")];

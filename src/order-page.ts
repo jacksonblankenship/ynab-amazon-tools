@@ -104,7 +104,7 @@ async function match(parsed: ParsedOrder, focus: Focus | null): Promise<Shown> {
   // The match leaned on a guess at this order's share: say so, it could be off.
   if (shared && solution?.absorbedBy.some((a) => a > 0))
     warnings.push(
-      "Part of this order was paid with points or a gift card shared with another order. Amazon doesn't say how much went to each, so the amounts below assume the share that fits.",
+      "Part of this order was paid with points or a gift card shared with another order. Amazon doesn't say how much went to each, so this match assumes the share that fits.",
     );
   if (incomplete) {
     warnings.push(

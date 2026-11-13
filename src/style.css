@@ -28,6 +28,10 @@
   font-size: 15px;
   font-weight: 700;
 }
+/* A note under a one-item answer, which has no table to space it. */
+.acs-answer + .acs-muted {
+  margin-top: 6px;
+}
 /* The items under the answer line belong to it: no rule between them. */
 .acs-result .acs-answer + .acs-split {
   margin-top: 2px;
