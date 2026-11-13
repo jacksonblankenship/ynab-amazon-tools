@@ -1,13 +1,9 @@
 // Small DOM helpers shared by userscripts.
 
-export const $ = <E extends Element = Element>(
-  sel: string,
-  root: ParentNode = document,
-) => root.querySelector<E>(sel);
-export const $$ = <E extends Element = Element>(
-  sel: string,
-  root: ParentNode = document,
-) => Array.from(root.querySelectorAll<E>(sel));
+export const $ = <E extends Element = Element>(sel: string, root: ParentNode = document) =>
+  root.querySelector<E>(sel);
+export const $$ = <E extends Element = Element>(sel: string, root: ParentNode = document) =>
+  Array.from(root.querySelectorAll<E>(sel));
 export const txt = (el: Element | null | undefined) =>
   el ? el.textContent.replace(/\s+/g, " ").trim() : "";
 
@@ -34,5 +30,4 @@ const ESC: Record<string, string> = {
   '"': "&quot;",
 };
 // The regex only matches ESC's keys, so the fallback never applies.
-export const esc = (s: unknown) =>
-  String(s).replace(/[&<>"]/g, (c) => ESC[c] ?? c);
+export const esc = (s: unknown) => String(s).replace(/[&<>"]/g, (c) => ESC[c] ?? c);

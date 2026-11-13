@@ -6,13 +6,7 @@ import { must } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
 import { sleep, until } from "./lib/spa.ts";
 import { parseOrder } from "./order.ts";
-import {
-  FIND_KEY,
-  overlay,
-  overlayFound,
-  overlayStop,
-  signal,
-} from "./overlay.ts";
+import { FIND_KEY, overlay, overlayFound, overlayStop, signal } from "./overlay.ts";
 import { logRequest, requestLog } from "./request-log.ts";
 import { leaves } from "./scrape.ts";
 import { parseTransactions, transactionRows } from "./transactions.ts";
@@ -34,10 +28,9 @@ export function isFindQuery(v: unknown): v is FindQuery {
 /** What an order contained, for telling apart equally likely matches. Null if unreadable. */
 async function orderContents(orderId: string): Promise<string | null> {
   try {
-    const res = await fetch(
-      `/your-orders/order-details?orderID=${encodeURIComponent(orderId)}`,
-      { credentials: "include" },
-    );
+    const res = await fetch(`/your-orders/order-details?orderID=${encodeURIComponent(orderId)}`, {
+      credentials: "include",
+    });
     if (!res.ok) return null;
     const items = parseOrder(
       new DOMParser().parseFromString(await res.text(), "text/html"),
@@ -45,9 +38,7 @@ async function orderContents(orderId: string): Promise<string | null> {
     const [first] = items;
     if (!first) return null;
     const title =
-      first.title.length > 60
-        ? `${first.title.slice(0, 60).replace(/\s+\S*$/, "")}…`
-        : first.title;
+      first.title.length > 60 ? `${first.title.slice(0, 60).replace(/\s+\S*$/, "")}…` : first.title;
     const more = items.length - 1;
     return more ? `${title} and ${more} more item${more > 1 ? "s" : ""}` : title;
   } catch {
@@ -71,10 +62,7 @@ type Loaded = "more" | "end" | "failed";
 // The new transactions page loads older rows as its list scrolls, inside its own
 // scrolling panel. Find that panel from a row (whatever it's called), scroll it to the
 // end, and wait for more rows. A wheel event isn't needed; setting the position is enough.
-async function loadMoreTransactions(
-  rows: Element[],
-  abort: AbortSignal,
-): Promise<Loaded> {
+async function loadMoreTransactions(rows: Element[], abort: AbortSignal): Promise<Loaded> {
   const last = rows.at(-1);
   if (!last) return "end";
   let box = last.parentElement;
@@ -107,9 +95,7 @@ async function settle(rows: Element[], abort: AbortSignal): Promise<Loaded> {
   const last = must(rows.at(-1), "last row");
   let failed = false;
   const done = await until(
-    () =>
-      (failed = !!loadError(last)) ||
-      transactionRows(document.body).length > rows.length,
+    () => (failed = !!loadError(last)) || transactionRows(document.body).length > rows.length,
     8000,
     abort,
   );
@@ -117,8 +103,7 @@ async function settle(rows: Element[], abort: AbortSignal): Promise<Loaded> {
 }
 
 const MAX_PAGES = 25;
-const THROTTLED =
-  "Amazon may be limiting requests. Wait a few minutes and try again.";
+const THROTTLED = "Amazon may be limiting requests. Wait a few minutes and try again.";
 // Asking again soon after a refusal can extend it, so hold off this long.
 const COOLDOWN_MS = 30 * 60e3;
 
@@ -145,9 +130,7 @@ export async function transactionsPage() {
     history.replaceState(null, "", location.pathname + location.search);
   } else {
     try {
-      const saved: unknown = JSON.parse(
-        sessionStorage.getItem(FIND_KEY) || "null",
-      );
+      const saved: unknown = JSON.parse(sessionStorage.getItem(FIND_KEY) || "null");
       q = isFindQuery(saved) ? saved : null;
     } catch {
       q = null;
@@ -156,9 +139,7 @@ export async function transactionsPage() {
   }
   const save = (v: FindQuery | null) => {
     try {
-      v
-        ? sessionStorage.setItem(FIND_KEY, JSON.stringify(v))
-        : sessionStorage.removeItem(FIND_KEY);
+      v ? sessionStorage.setItem(FIND_KEY, JSON.stringify(v)) : sessionStorage.removeItem(FIND_KEY);
     } catch {
       /* ignore */
     }
@@ -174,8 +155,7 @@ export async function transactionsPage() {
   const dates = q.date ? q.date.split(",") : [];
   const targets = dates.map(toDay).filter((d) => d != null);
   const target = targets.length ? Math.min(...targets) : null;
-  const distance = (day: number) =>
-    Math.min(...targets.map((t) => Math.abs(day - t)));
+  const distance = (day: number) => Math.min(...targets.map((t) => Math.abs(day - t)));
   const kindName = q.kind === "refund" ? "refund" : "charge";
   type Hit = Txn & { diff: number };
   // A charge covering several orders counts once per order, so each can be opened.
@@ -241,18 +221,13 @@ export async function transactionsPage() {
     );
   };
 
-  if (
-    !(await until(() => parseTransactions(document, null).length > 0, 8000, search))
-  ) {
+  if (!(await until(() => parseTransactions(document, null).length > 0, 8000, search))) {
     if (search.aborted) return;
     stop("Amazon didn't show any transactions", THROTTLED);
     return;
   }
   let rows = parseTransactions(document, null);
-  if (
-    !rows.length &&
-    /order\s*#\s*\d{3}-\d{7}-\d{7}/i.test(document.body.textContent)
-  )
+  if (!rows.length && /order\s*#\s*\d{3}-\d{7}-\d{7}/i.test(document.body.textContent))
     return stop(
       "Couldn't read Amazon's transactions page",
       "Amazon may have changed its layout. Close this and look manually.",
@@ -330,13 +305,9 @@ export async function transactionsPage() {
     await pace();
     if (search.aborted) return;
     // No retry: Amazon's limit lasts an hour or more, and asking again inside it only extends it.
-    const got = await loadMoreTransactions(
-      transactionRows(document.body),
-      search,
-    );
+    const got = await loadMoreTransactions(transactionRows(document.body), search);
     if (got !== "end") logRequest("scroll", got === "failed" ? 429 : 200);
-    if (got === "failed")
-      return refusedNow(transactionRows(document.body).length);
+    if (got === "failed") return refusedNow(transactionRows(document.body).length);
     if (got === "end") {
       stalled = true;
       break;

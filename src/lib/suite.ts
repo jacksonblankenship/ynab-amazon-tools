@@ -16,11 +16,9 @@ export const searchIcon = (size: number) =>
   `<svg aria-hidden="true" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>`;
 
 export const reducedMotion = () =>
-  typeof matchMedia === "function" &&
-  matchMedia("(prefers-reduced-motion: reduce)").matches;
+  typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const FONT =
-  "https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap";
+const FONT = "https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap";
 
 /** Inject the suite stylesheet under `prefix`, and the Figtree font off YNAB (which has its own). */
 export function suiteStyle(prefix: string) {

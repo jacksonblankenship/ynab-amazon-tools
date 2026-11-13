@@ -1,14 +1,6 @@
 // Matching card charges to deliveries, and dividing each charge among items.
 import { allocateBy } from "./lib/money.ts";
-import type {
-  Charge,
-  Group,
-  PricedItem,
-  Shipment,
-  Solution,
-  Split,
-  SplitLine,
-} from "./types.ts";
+import type { Charge, Group, PricedItem, Shipment, Solution, Split, SplitLine } from "./types.ts";
 
 /** Set partitions of `xs`, bucketed by number of groups (most groups first). */
 export function partitionsByLevel<T>(xs: readonly T[]): T[][][][] {
@@ -17,11 +9,7 @@ export function partitionsByLevel<T>(xs: readonly T[]): T[][][][] {
   const rgs = new Array<number>(n).fill(0);
   (function rec(i: number, max: number) {
     if (i === n) {
-      all.push(
-        Array.from({ length: max + 1 }, (_, g) =>
-          xs.filter((_x, k) => rgs[k] === g),
-        ),
-      );
+      all.push(Array.from({ length: max + 1 }, (_, g) => xs.filter((_x, k) => rgs[k] === g)));
       return;
     }
     for (let g = 0; g <= max + 1; g++) {
@@ -29,9 +17,7 @@ export function partitionsByLevel<T>(xs: readonly T[]): T[][][][] {
       rec(i + 1, Math.max(max, g));
     }
   })(0, -1);
-  return Array.from({ length: n }, (_, l) =>
-    all.filter((p) => p.length === n - l),
-  );
+  return Array.from({ length: n }, (_, l) => all.filter((p) => p.length === n - l));
 }
 
 /**
@@ -53,10 +39,7 @@ export function solve(
     .map((c, j) => ({ j, amount: c.amount }))
     .sort((a, b) => b.amount - a.amount);
   const indexed = shipments.map((s, i) => ({ s, i }));
-  const levels =
-    indexed.length <= 8
-      ? partitionsByLevel(indexed)
-      : [[indexed.map((x) => [x])]];
+  const levels = indexed.length <= 8 ? partitionsByLevel(indexed) : [[indexed.map((x) => [x])]];
   let budget = 3e6;
   // In an object so TS doesn't narrow `best` to null: it is only assigned inside the closures below.
   const found: { best: Solution | null } = { best: null };
@@ -113,11 +96,7 @@ export function solve(
             sig,
             ambiguous: false,
           };
-        } else if (
-          Math.abs(score - best.score) < 1e-9 &&
-          sig !== best.sig &&
-          best.groups === G
-        ) {
+        } else if (Math.abs(score - best.score) < 1e-9 && sig !== best.sig && best.groups === G) {
           best.ambiguous = true;
         }
       };
@@ -152,11 +131,7 @@ export function solve(
 }
 
 /** Decide which items each charge paid for, with amounts that sum exactly to the charge. */
-export function splitGroup(
-  items: PricedItem[],
-  groupCharges: Charge[],
-  absorbed: number,
-): Split[] {
+export function splitGroup(items: PricedItem[], groupCharges: Charge[], absorbed: number): Split[] {
   const toLines = (c: Charge, its: PricedItem[]): SplitLine[] =>
     allocateBy(c.amount, its, (i) => i.total).map(([item, amount]) => ({
       item,

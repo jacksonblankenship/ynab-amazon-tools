@@ -2,16 +2,22 @@
   "name": "ynab-amazon-tools",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "description": "Tools that make working with Amazon purchases in YNAB easier.",
   "license": "MIT",
+  "type": "module",
   "scripts": {
     "dev": "vite",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
     "build": "vite build",
     "typecheck": "tsc -p . && tsc -p tsconfig.node.json"
   },
   "devDependencies": {
     "@tsconfig/strictest": "^2.0.9",
+    "oxfmt": "^0.78.0",
+    "oxlint": "^1.93.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vite-plugin-monkey": "^8.1.1"

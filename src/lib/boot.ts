@@ -7,12 +7,11 @@ export const ready = (fn: () => void) =>
     : fn();
 
 /** Wrap `fn` so anything it throws, sync or async, goes to `fail`. */
-export const guard =
-  (fail: (e: unknown) => void, fn: () => void | Promise<void>) => () => {
-    try {
-      const r = fn();
-      if (r) r.catch(fail);
-    } catch (e) {
-      fail(e);
-    }
-  };
+export const guard = (fail: (e: unknown) => void, fn: () => void | Promise<void>) => () => {
+  try {
+    const r = fn();
+    if (r) r.catch(fail);
+  } catch (e) {
+    fail(e);
+  }
+};

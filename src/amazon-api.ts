@@ -11,8 +11,7 @@ import { logRequest } from "./request-log.ts";
 import { ORDER_RE } from "./scrape.ts";
 import type { FindQuery, Txn } from "./types.ts";
 
-const API_PATH =
-  "/payments-portal/data/iris/live/v1/data/manage/get-transactions";
+const API_PATH = "/payments-portal/data/iris/live/v1/data/manage/get-transactions";
 const API_PAGE = 100;
 const API_MAX = 10;
 
@@ -46,9 +45,7 @@ interface ApiTxn {
 function pageProps(): PageProps | null {
   const s =
     document.getElementById("__NEXT_DATA__") ??
-    [...document.scripts].find(
-      (x) => !x.src && x.textContent.trimStart().startsWith('{"props"'),
-    );
+    [...document.scripts].find((x) => !x.src && x.textContent.trimStart().startsWith('{"props"'));
   try {
     return JSON.parse(s?.textContent ?? "null")?.props?.pageProps ?? null;
   } catch {
@@ -120,9 +117,7 @@ function apiBody(
       ...(refundsOnly
         ? {
             dataControls: {
-              filterItemInputs: [
-                { category: "TransactionType", values: ["REFUND"] },
-              ],
+              filterItemInputs: [{ category: "TransactionType", values: ["REFUND"] }],
             },
           }
         : {}),
@@ -189,10 +184,7 @@ export async function apiSearch<H>(
     }
     const json: unknown = res.ok ? await res.json().catch(() => null) : null;
     const list = findKey(json, /^transactionList$/);
-    logRequest(
-      "api",
-      Array.isArray(list) ? res.status : `${res.status}, unreadable answer`,
-    );
+    logRequest("api", Array.isArray(list) ? res.status : `${res.status}, unreadable answer`);
     if (!Array.isArray(list)) return { unusable: true };
     seen.push(
       ...list.flatMap((t: ApiTxn) => {
@@ -204,11 +196,7 @@ export async function apiSearch<H>(
     if (hits.length) return { hits };
     if (past) return { done: true, past: true, checked: seen.length };
     cursor = findKey(json, /^lastEvaluated/);
-    if (
-      typeof cursor !== "string" ||
-      !cursor ||
-      findKey(json, /^hasMore$/) === false
-    )
+    if (typeof cursor !== "string" || !cursor || findKey(json, /^hasMore$/) === false)
       return { done: true, checked: seen.length };
   }
   return { done: true, limit: true, checked: seen.length };

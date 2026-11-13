@@ -17,10 +17,7 @@ export const itemNames = (set: Trace["itemSets"][number]) =>
 // Amazon doesn't say which items a refund was for, so find the item units whose
 // estimated price (with tax) adds up to it. Returns every fit, so the caller can tell
 // a sure answer from a guess.
-function refundedItems(
-  order: Order,
-  amount: number,
-): { item: PricedItem; units: number }[][] {
+function refundedItems(order: Order, amount: number): { item: PricedItem; units: number }[][] {
   const items = order.shipments.flatMap((sh) => sh.items);
   const pieces = items.flatMap((item, idx) =>
     item.total > 0
@@ -87,9 +84,7 @@ export function traceRefund(order: Order, charges: Txn[], refund: Txn): Trace {
 // A hint only: Amazon doesn't say which items a refund was for.
 export function refundHint(t: Trace): HTMLElement[] {
   const [only, ...more] = t.itemSets;
-  return only && !more.length
-    ? [line("acs-muted", `Probably for: ${itemNames(only)}`)]
-    : [];
+  return only && !more.length ? [line("acs-muted", `Probably for: ${itemNames(only)}`)] : [];
 }
 
 /** The refund's panel on the order page, pointing back to YNAB for the categories. */
@@ -101,10 +96,7 @@ export function refundPanel(t: Trace) {
         "acs-muted",
         `This order's card charges: ${t.charges.map((c) => `${fmt(c.amount)} on ${c.date || "an unknown date"}`).join(", ")}.`,
       ),
-      line(
-        "acs-put",
-        "Switch back to your YNAB tab to see the categories they were in.",
-      ),
+      line("acs-put", "Switch back to your YNAB tab to see the categories they were in."),
     );
   else
     body.push(

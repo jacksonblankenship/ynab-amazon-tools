@@ -72,8 +72,7 @@ export function ynabButton(opts: {
         clearTimeout(hideTimer);
         return;
       }
-      const row =
-        e.target instanceof Element && e.target.closest(".ynab-grid-body-row");
+      const row = e.target instanceof Element && e.target.closest(".ynab-grid-body-row");
       if (row) {
         if (row !== current) show(row);
         else clearTimeout(hideTimer);

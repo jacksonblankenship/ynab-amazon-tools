@@ -6,14 +6,7 @@ import { resultPanel } from "./lib/result-panel.ts";
 import { disclosure } from "./lib/suite.ts";
 import { splitGroup } from "./matcher.ts";
 import { suite } from "./overlay.ts";
-import type {
-  Focus,
-  Order,
-  RenderResult,
-  Solution,
-  Split,
-  Txn,
-} from "./types.ts";
+import type { Focus, Order, RenderResult, Solution, Split, Txn } from "./types.ts";
 
 export const short = (t: string) =>
   t.length > 70 ? `${t.slice(0, 70).replace(/\s+\S*$/, "")}…` : t;
@@ -49,9 +42,7 @@ export function render(order: Order, result: RenderResult) {
   const anchor = $('[data-component="shipments"]');
   const anchorParent = anchor?.parentNode;
   if (!anchor || !anchorParent)
-    throw new Error(
-      "Couldn't find where to show the results. Amazon may have changed this page.",
-    );
+    throw new Error("Couldn't find where to show the results. Amazon may have changed this page.");
   $$(".acs-panel,.acs-banner,.acs-result").forEach((e) => {
     e.remove();
   });
@@ -72,9 +63,7 @@ export function render(order: Order, result: RenderResult) {
     const b = el("div", "acs-banner");
     const gi = groupOfShipment.get(i);
     const groupCharges =
-      solution && gi != null
-        ? charges.filter((_, j) => solution.assign[j] === gi)
-        : [];
+      solution && gi != null ? charges.filter((_, j) => solution.assign[j] === gi) : [];
     const est = `<span class="acs-muted">Estimated ${fmt(sh.total)} incl. tax</span>`;
 
     if (!solution || gi == null || !groupCharges.length) {
@@ -87,8 +76,7 @@ export function render(order: Order, result: RenderResult) {
         ),
       );
       const fake = { amount: sh.total, date: "" };
-      for (const split of splitGroup(sh.items, [fake], 0))
-        b.appendChild(splitTable(split, false));
+      for (const split of splitGroup(sh.items, [fake], 0)) b.appendChild(splitTable(split, false));
     } else {
       const g = must(solution.groups[gi], `group ${gi}`);
       const others = g.members.filter((x) => x !== i);
@@ -103,9 +91,7 @@ export function render(order: Order, result: RenderResult) {
         el(
           "div",
           "acs-muted",
-          groupCharges
-            .map((c) => `${chargeLabel(c)} · ${esc(c.method)}`)
-            .join("<br>"),
+          groupCharges.map((c) => `${chargeLabel(c)} · ${esc(c.method)}`).join("<br>"),
         ),
       );
       if (others.length) {
@@ -127,17 +113,9 @@ export function render(order: Order, result: RenderResult) {
         );
       }
       if (others.length && i !== Math.min(...g.members)) {
-        b.appendChild(
-          el(
-            "div",
-            "acs-muted",
-            `See ${dn(Math.min(...g.members))} for the split.`,
-          ),
-        );
+        b.appendChild(el("div", "acs-muted", `See ${dn(Math.min(...g.members))} for the split.`));
       } else {
-        const items = g.members.flatMap(
-          (x) => must(shipments[x], `delivery ${x + 1}`).items,
-        );
+        const items = g.members.flatMap((x) => must(shipments[x], `delivery ${x + 1}`).items);
         const splits = splitGroup(items, groupCharges, absorbed);
         splits.forEach((s) => {
           b.appendChild(splitTable(s, groupCharges.length > 1));
@@ -226,9 +204,7 @@ export function renderFocus(
 ): { panel: HTMLElement; boxes: Element[] } | null {
   const matched = charges.flatMap((c, j) => {
     const gi = solution.assign[j];
-    return gi !== undefined && gi >= 0 && c.amount === focus.amount
-      ? [{ c, gi }]
-      : [];
+    return gi !== undefined && gi >= 0 && c.amount === focus.amount ? [{ c, gi }] : [];
   });
   const hit = matched.find((x) => x.c.date === focus.date) ?? matched[0];
   if (!hit) return null;
@@ -236,17 +212,11 @@ export function renderFocus(
   const g = must(solution.groups[gi], `group ${gi}`);
   const absorbed = must(solution.absorbedBy[gi], `credit for group ${gi}`);
   const groupCharges = charges.filter((_, k) => solution.assign[k] === gi);
-  const items = g.members.flatMap(
-    (x) => must(order.shipments[x], `delivery ${x + 1}`).items,
-  );
-  const split = splitGroup(items, groupCharges, absorbed).find(
-    (sp) => sp.charge === c,
-  );
+  const items = g.members.flatMap((x) => must(order.shipments[x], `delivery ${x + 1}`).items);
+  const split = splitGroup(items, groupCharges, absorbed).find((sp) => sp.charge === c);
   // splitGroup returns one split per charge, so this shouldn't happen; fall back to the full view.
   if (!split) return null;
-  const boxes = g.members.map(
-    (x) => must(order.shipments[x], `delivery ${x + 1}`).box,
-  );
+  const boxes = g.members.map((x) => must(order.shipments[x], `delivery ${x + 1}`).box);
   const box = must(
     order.shipments[Math.min(...g.members)],
     `delivery ${Math.min(...g.members) + 1}`,

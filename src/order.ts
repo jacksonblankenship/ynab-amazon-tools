@@ -6,26 +6,18 @@ import type { Order, ParsedOrder, Shipment, Summary } from "./types.ts";
 
 export function parseOrder(doc: Document): ParsedOrder {
   const orderId =
-    (txt($('[data-component="orderId"]', doc)).match(/\d{3}-\d{7}-\d{7}/) ||
-      [])[0] || new URLSearchParams(location.search).get("orderID");
+    (txt($('[data-component="orderId"]', doc)).match(/\d{3}-\d{7}-\d{7}/) || [])[0] ||
+    new URLSearchParams(location.search).get("orderID");
 
-  let blocks = $$(
-    '[data-component="shipments"] [data-component="purchasedItems"]',
-    doc,
-  );
+  let blocks = $$('[data-component="shipments"] [data-component="purchasedItems"]', doc);
   if (!blocks.length) blocks = $$('[data-component="purchasedItems"]', doc);
   const shipments = blocks.map((pi, idx) => {
     // The shipment's box: nearest ancestor holding a status, but only this one shipment.
     let box = pi;
-    while (
-      box.parentElement &&
-      !box.querySelector('[data-component="shipmentStatus"]')
-    )
+    while (box.parentElement && !box.querySelector('[data-component="shipmentStatus"]'))
       box = box.parentElement;
     if ($$('[data-component="purchasedItems"]', box).length > 1) box = pi;
-    const status = txt($('[data-component="shipmentStatus"]', box)).split(
-      /(?<=\d)\s+(?=[A-Z])/,
-    )[0];
+    const status = txt($('[data-component="shipmentStatus"]', box)).split(/(?<=\d)\s+(?=[A-Z])/)[0];
 
     let titles = $$('[data-component="itemTitle"]', pi);
     if (!titles.length)
@@ -35,21 +27,14 @@ export function parseOrder(doc: Document): ParsedOrder {
     const items = titles.map((t) => {
       let root = t;
       // Climb toward pi (an ancestor of t, so the loop ends there at the latest).
-      while (
-        root !== pi &&
-        !root.querySelector('[data-component="itemImage"], img')
-      ) {
+      while (root !== pi && !root.querySelector('[data-component="itemImage"], img')) {
         const up = root.parentElement;
         if (!up) break;
         root = up;
       }
       const priceBox = $('[data-component="unitPrice"]', root);
       const price =
-        cents(
-          txt($(".a-offscreen", priceBox || root)) ||
-            moneyIn(priceBox || root)[0] ||
-            "",
-        ) || 0;
+        cents(txt($(".a-offscreen", priceBox || root)) || moneyIn(priceBox || root)[0] || "") || 0;
       const qty = itemQty(root);
       return { title: txt(t), price, qty, ext: price * qty, shipment: idx };
     });
@@ -74,8 +59,7 @@ export function parseOrder(doc: Document): ParsedOrder {
     else if (/total before tax/i.test(label)) summary.beforeTax = val;
     else if (/subtotal/i.test(label)) summary.subtotal = val;
     else if (/tax/i.test(label)) summary.tax += val;
-    else if (/points|gift card|reward/i.test(label))
-      summary.credits += -val; // paid by non-card balance
+    else if (/points|gift card|reward/i.test(label)) summary.credits += -val; // paid by non-card balance
     else if (/eligible|refund/i.test(label)) continue;
     else summary.preTaxAdj += val; // shipping, fees (+) and promotions/coupons (-)
   }
@@ -87,11 +71,8 @@ export function parseOrder(doc: Document): ParsedOrder {
 
 /** Quantity: Amazon overlays it as a bare number on the product image; otherwise "Qty: N" text. */
 function itemQty(root: Element): number {
-  const pic =
-    $('[data-component="itemImage"]', root) || $("img", root)?.parentElement;
-  const scope = pic?.closest('[data-component="itemImage"]')
-    ? pic
-    : pic?.parentElement;
+  const pic = $('[data-component="itemImage"]', root) || $("img", root)?.parentElement;
+  const scope = pic?.closest('[data-component="itemImage"]') ? pic : pic?.parentElement;
   const badge =
     scope &&
     leaves(scope)
@@ -107,10 +88,7 @@ function itemQty(root: Element): number {
 
 /** Order Summary as [label, cents] pairs, read from the text rather than the row markup. */
 function summaryRows(doc: Document): [string, number][] {
-  let box: Element | null | undefined = $(
-    '[data-component="chargeSummary"]',
-    doc,
-  );
+  let box: Element | null | undefined = $('[data-component="chargeSummary"]', doc);
   if (!box) {
     // Fallback: the smallest block that holds both "Grand Total" and "Subtotal".
     box = leaves(doc.body || doc).find((e) => /grand total/i.test(txt(e)));
@@ -169,9 +147,7 @@ export function priceItems(order: ParsedOrder): {
     item: { ...i, total: i.ext + a + t },
   }));
   const shipments = order.shipments.map((sh): Shipment => {
-    const its = sh.items.flatMap((i) =>
-      priced.filter((p) => p.from === i).map((p) => p.item),
-    );
+    const its = sh.items.flatMap((i) => priced.filter((p) => p.from === i).map((p) => p.item));
     return { ...sh, items: its, total: its.reduce((a, i) => a + i.total, 0) };
   });
   return { order: { ...order, shipments }, warnings };

@@ -20,15 +20,11 @@ const card = (box: Element) => {
 export async function orderPage() {
   if (!$('[data-component="shipments"] [data-component="purchasedItems"]')) {
     if (focusTarget())
-      overlayStop(
-        "Couldn't read this order page",
-        "Amazon may have changed its layout.",
-      );
+      overlayStop("Couldn't read this order page", "Amazon may have changed its layout.");
     return;
   }
   const focus = focusTarget();
-  if (focus)
-    overlayFound(`Found ${fmt(focus.amount)}`, "Finding the items it paid for");
+  if (focus) overlayFound(`Found ${fmt(focus.amount)}`, "Finding the items it paid for");
   const { order, warnings } = priceItems(parseOrder(document));
   const search = signal();
   let txns: Txn[] = [];
@@ -48,9 +44,7 @@ export async function orderPage() {
   const charges = txns.filter((t) => t.kind === "charge");
   const credits = txns.filter((t) => t.kind === "credit");
   const refunds = txns.filter((t) => t.kind === "refund");
-  const credit = credits.length
-    ? credits.reduce((a, c) => a + c.amount, 0)
-    : order.summary.credits;
+  const credit = credits.length ? credits.reduce((a, c) => a + c.amount, 0) : order.summary.credits;
   const { solution, incomplete } = charges.length
     ? solve(order.shipments, charges, credit)
     : { solution: null, incomplete: false };
@@ -60,23 +54,16 @@ export async function orderPage() {
         ? "This order has too many charges to check every combination. The match below is the best found, not guaranteed. Double-check it against your statement."
         : "This order has too many charges to check every combination, so no match was found. Match the charges to deliveries manually.",
     );
-  } else if (
-    charges.length &&
-    (!solution || solution.assign.some((g) => g < 0))
-  ) {
+  } else if (charges.length && (!solution || solution.assign.some((g) => g < 0))) {
     warnings.push(
       "Some charges didn't match a delivery cleanly (item-specific coupons or a partial refund can cause this). Unmatched amounts are flagged.",
     );
   }
-  const shown =
-    focus &&
-    solution &&
-    renderFocus(order, charges, solution, focus, warnings);
+  const shown = focus && solution && renderFocus(order, charges, solution, focus, warnings);
   if (shown) {
     const cards = shown.boxes.map(card);
     const top = Math.min(...cards.map((c) => c.getBoundingClientRect().top));
-    if (Number.isFinite(top))
-      window.scrollTo({ top: window.scrollY + top - 16 });
+    if (Number.isFinite(top)) window.scrollTo({ top: window.scrollY + top - 16 });
     overlayDone(shown.panel, () => {
       for (const c of cards) c.classList.add("acs-glow");
     });
@@ -84,10 +71,8 @@ export async function orderPage() {
   }
   render(order, { charges, credits, refunds, solution, warnings, error });
   // Opened from a YNAB refund: show it, and hand its trace to the YNAB tab.
-  const sameRefunds =
-    focus && !error ? refunds.filter((r) => r.amount === focus.amount) : [];
-  const refund =
-    sameRefunds.find((r) => r.date === focus?.date) ?? sameRefunds[0];
+  const sameRefunds = focus && !error ? refunds.filter((r) => r.amount === focus.amount) : [];
+  const refund = sameRefunds.find((r) => r.date === focus?.date) ?? sameRefunds[0];
   if (refund) {
     const trace = traceRefund(order, charges, refund);
     const panel = refundPanel(trace);
@@ -102,9 +87,7 @@ export async function orderPage() {
   }
   if (focus) {
     overlayStop(
-      error
-        ? "Couldn't read Amazon's charges"
-        : `Couldn't tie ${fmt(focus.amount)} to a delivery`,
+      error ? "Couldn't read Amazon's charges" : `Couldn't tie ${fmt(focus.amount)} to a delivery`,
       `${error ? `${error}. ` : ""}Showing the full breakdown for this order instead.`,
     );
   }

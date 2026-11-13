@@ -58,10 +58,7 @@ function isState(v: unknown): v is State {
   );
 }
 
-export function makeOverlay(
-  suite: Suite,
-  opts: { timeoutMs?: number; onEnd?: () => void } = {},
-) {
+export function makeOverlay(suite: Suite, opts: { timeoutMs?: number; onEnd?: () => void } = {}) {
   const { timeoutMs = 30000, onEnd } = opts;
   const p = suite.prefix;
   const id = `${p}-overlay`;
@@ -147,14 +144,7 @@ export function makeOverlay(
       icon.classList.add(`${p}-static`);
     }
     if (state.found) o.classList.add(`${p}-found`);
-    card.append(
-      icon,
-      msg,
-      sub,
-      steps,
-      extra,
-      el("div", `${p}-ov-foot`, disclosure(suite)),
-    );
+    card.append(icon, msg, sub, steps, extra, el("div", `${p}-ov-foot`, disclosure(suite)));
     o.append(el("div", `${p}-ov-backdrop`), card);
     (document.body || document.documentElement).appendChild(o);
     syncSteps(steps, state, true);
@@ -252,12 +242,7 @@ export function makeOverlay(
    * Stop and explain; the user closes it. `finished` marks the last step done (the search
    * ran to the end) rather than missed.
    */
-  function overlayStop(
-    title: string,
-    sub = "",
-    choices: Choice[] = [],
-    { finished = false } = {},
-  ) {
+  function overlayStop(title: string, sub = "", choices: Choice[] = [], { finished = false } = {}) {
     const v = parts();
     clearTimeout(timer);
     const last = v.state.steps.at(-1);

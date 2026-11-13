@@ -1,6 +1,5 @@
 /** Message text for anything thrown. */
-export const errMsg = (e: unknown) =>
-  e instanceof Error && e.message ? e.message : String(e);
+export const errMsg = (e: unknown) => (e instanceof Error && e.message ? e.message : String(e));
 
 /**
  * For lookups that can only miss if this script has a bug (e.g. a solver index out of range).

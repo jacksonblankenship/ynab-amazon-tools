@@ -26,10 +26,7 @@ export function requestLog(): LoggedRequest[] {
 
 export function logRequest(how: string, status: number | string) {
   try {
-    GM_setValue(
-      LOG_KEY,
-      [...requestLog(), { at: Date.now(), how, status }].slice(-300),
-    );
+    GM_setValue(LOG_KEY, [...requestLog(), { at: Date.now(), how, status }].slice(-300));
   } catch {
     /* ignore */
   }
@@ -59,9 +56,7 @@ export function requestLogPanel() {
     )
     .join("");
   const box = el("div", "acs-split");
-  box.appendChild(
-    el("table", null, rows || "<tr><td>Nothing yet.</td></tr>"),
-  );
+  box.appendChild(el("table", null, rows || "<tr><td>Nothing yet.</td></tr>"));
   $$(".acs-result").forEach((e) => {
     e.remove();
   });
@@ -72,14 +67,8 @@ export function requestLogPanel() {
       amount: String(within(864e5).length),
       meta: "loads of older transactions in the last 24 hours",
       body: [
-        line(
-          null,
-          `Last hour: ${tally(within(36e5))}. Last 24 hours: ${tally(within(864e5))}.`,
-        ),
-        line(
-          "acs-muted",
-          refused ? `Last refusal: ${time(refused.at)}.` : "No refusals logged.",
-        ),
+        line(null, `Last hour: ${tally(within(36e5))}. Last 24 hours: ${tally(within(864e5))}.`),
+        line("acs-muted", refused ? `Last refusal: ${time(refused.at)}.` : "No refusals logged."),
         box,
       ],
     }),

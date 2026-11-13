@@ -29,9 +29,7 @@ declare global {
     overlayStop("Something went wrong", errMsg(e));
   };
   // Runs at document-start so the loading overlay covers the page before it paints.
-  const onTransactions = location.pathname.startsWith(
-    "/cpe/yourpayments/transactions",
-  );
+  const onTransactions = location.pathname.startsWith("/cpe/yourpayments/transactions");
   if (location.hostname !== "app.ynab.com") {
     try {
       GM_registerMenuCommand("Amazon request log", () => ready(requestLogPanel));
@@ -53,8 +51,7 @@ declare global {
     } catch {
       /* ignore */
     }
-    if (pending)
-      overlayStart("Finding your charge on Amazon", "Searching your transactions");
+    if (pending) overlayStart("Finding your charge on Amazon", "Searching your transactions");
     ready(guard(fail, transactionsPage));
   } else {
     const f = focusTarget();

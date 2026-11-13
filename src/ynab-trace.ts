@@ -51,10 +51,7 @@ function isTrace(v: unknown): v is Trace {
 }
 
 // The token lives in Tampermonkey's own storage (never the page's) and only goes to api.ynab.com.
-function ynabGet(
-  path: string,
-  token: string,
-): Promise<{ status: number; body: unknown }> {
+function ynabGet(path: string, token: string): Promise<{ status: number; body: unknown }> {
   return new Promise((resolve, reject) => {
     GM_xmlhttpRequest({
       method: "GET",
@@ -76,21 +73,17 @@ function ynabGet(
   });
 }
 
-const ynabDay = (iso: string) =>
-  Math.round(Date.parse(`${iso}T00:00:00Z`) / DAY);
+const ynabDay = (iso: string) => Math.round(Date.parse(`${iso}T00:00:00Z`) / DAY);
 
 // YNAB usually dates a card charge a day or two after Amazon does.
 function findCharges(txns: YnabTxn[], c: Trace["charges"][number]) {
   const day = toDay(c.date);
-  const amazonish = (x: YnabTxn) =>
-    /amazon|amzn/i.test(x.payee_name || "") ? 0 : 1;
+  const amazonish = (x: YnabTxn) => (/amazon|amzn/i.test(x.payee_name || "") ? 0 : 1);
   return txns
     .filter((x) => !x.deleted && x.amount === -c.amount * 10)
     .map((x) => ({ x, d: day == null ? 0 : ynabDay(x.date) - day }))
     .filter((m) => m.d >= -3 && m.d <= 7)
-    .sort(
-      (a, b) => amazonish(a.x) - amazonish(b.x) || Math.abs(a.d) - Math.abs(b.d),
-    )
+    .sort((a, b) => amazonish(a.x) - amazonish(b.x) || Math.abs(a.d) - Math.abs(b.d))
     .map((m) => m.x);
 }
 
@@ -101,9 +94,7 @@ function refundLines(subs: YnabSub[], t: Trace) {
     ...set.map((x) => x.amount),
     set.reduce((a, x) => a + x.amount, 0),
   ]);
-  return subs.filter((s) =>
-    shares.some((v) => Math.abs(-s.amount / 10 - v) <= 3),
-  );
+  return subs.filter((s) => shares.some((v) => Math.abs(-s.amount / 10 - v) <= 3));
 }
 
 const realCategory = (n: string | null | undefined) =>
@@ -167,10 +158,8 @@ function describeMatch(
 function categorySummary(cats: string[], t: Trace) {
   const all = [...new Set(cats)];
   const [one] = all;
-  if (!one)
-    return [line("acs-warn", "None of these charges are categorized in YNAB yet.")];
-  if (all.length === 1)
-    return [line("acs-put", `Put ${fmt(t.refund.amount)} back in ${one}`)];
+  if (!one) return [line("acs-warn", "None of these charges are categorized in YNAB yet.")];
+  if (all.length === 1) return [line("acs-put", `Put ${fmt(t.refund.amount)} back in ${one}`)];
   return [
     line(
       "acs-put",
@@ -210,8 +199,7 @@ function tokenForm(done: () => void): HTMLElement[] {
 }
 
 async function fillTrace(body: HTMLElement, t: Trace): Promise<void> {
-  const say = (...nodes: Node[]) =>
-    body.replaceChildren(...refundHint(t), ...nodes);
+  const say = (...nodes: Node[]) => body.replaceChildren(...refundHint(t), ...nodes);
   if (!t.charges.length)
     return say(
       line(
@@ -229,15 +217,10 @@ async function fillTrace(body: HTMLElement, t: Trace): Promise<void> {
   )
     .toISOString()
     .slice(0, 10);
-  const plan = location.pathname.match(
-    /[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}/i,
-  )?.[0];
+  const plan = location.pathname.match(/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}/i)?.[0];
   let res: { status: number; body: unknown };
   try {
-    res = await ynabGet(
-      `/plans/${plan ?? "last-used"}/transactions?since_date=${since}`,
-      token,
-    );
+    res = await ynabGet(`/plans/${plan ?? "last-used"}/transactions?since_date=${since}`, token);
   } catch (e) {
     return say(line("acs-warn", errMsg(e)));
   }
@@ -250,17 +233,12 @@ async function fillTrace(body: HTMLElement, t: Trace): Promise<void> {
   }
   if (res.status === 429)
     return say(
-      line(
-        "acs-warn",
-        "YNAB is limiting requests (it allows 200 an hour). Try again later.",
-      ),
+      line("acs-warn", "YNAB is limiting requests (it allows 200 an hour). Try again later."),
     );
   const txns = transactionsIn(res.body);
   if (res.status !== 200 || !txns)
     return say(line("acs-warn", `YNAB answered with an error (${res.status}).`));
-  const found = t.charges.map((c) =>
-    describeMatch(c, findCharges(txns, c), t, plan),
-  );
+  const found = t.charges.map((c) => describeMatch(c, findCharges(txns, c), t, plan));
   say(
     line(
       "acs-muted",
@@ -276,11 +254,9 @@ async function fillTrace(body: HTMLElement, t: Trace): Promise<void> {
 
 /** `data.transactions` from a YNAB answer, trusted to be YNAB's documented shape. */
 function transactionsIn(body: unknown): YnabTxn[] | null {
-  if (typeof body !== "object" || body === null || !("data" in body))
-    return null;
+  if (typeof body !== "object" || body === null || !("data" in body)) return null;
   const { data } = body;
-  if (typeof data !== "object" || data === null || !("transactions" in data))
-    return null;
+  if (typeof data !== "object" || data === null || !("transactions" in data)) return null;
   return Array.isArray(data.transactions) ? data.transactions : null;
 }
 
@@ -298,9 +274,7 @@ function showTrace(t: Trace) {
     body: [body],
   });
   document.body.appendChild(panel);
-  fillTrace(body, t).catch((e) =>
-    body.replaceChildren(line("acs-warn", errMsg(e))),
-  );
+  fillTrace(body, t).catch((e) => body.replaceChildren(line("acs-warn", errMsg(e))));
 }
 
 // The Amazon tab hands the trace over through Tampermonkey's storage; this YNAB tab shows it.
@@ -327,14 +301,10 @@ export function ynabTrace() {
     });
     body.replaceChildren(
       ...tokenForm(() =>
-        body.replaceChildren(
-          line("acs-put", "Saved. Refund traces will use it."),
-        ),
+        body.replaceChildren(line("acs-put", "Saved. Refund traces will use it.")),
       ),
     );
     document.body.appendChild(panel);
   });
-  GM_registerMenuCommand("Forget YNAB token", () =>
-    GM_setValue(TOKEN_KEY, ""),
-  );
+  GM_registerMenuCommand("Forget YNAB token", () => GM_setValue(TOKEN_KEY, ""));
 }

@@ -16,10 +16,7 @@ export interface ResultPanelOptions {
 
 export function resultPanel(suite: Suite, o: ResultPanelOptions) {
   const p = suite.prefix;
-  const panel = el(
-    "section",
-    `${p}-result${o.floating ? ` ${p}-floating` : ""}`,
-  );
+  const panel = el("section", `${p}-result${o.floating ? ` ${p}-floating` : ""}`);
   const label = o.label ?? "This charge";
   panel.setAttribute("aria-label", `${label}, from ${suite.name}`);
   const text = (cls: string, t: string) => {

@@ -22,5 +22,4 @@ export const leaves = (root: ParentNode) =>
       txt(e) &&
       !e.closest('[aria-hidden="true"]'),
   );
-export const moneyIn = (e: Element): string[] =>
-  e.textContent.match(MONEY_RE) || [];
+export const moneyIn = (e: Element): string[] => e.textContent.match(MONEY_RE) || [];
