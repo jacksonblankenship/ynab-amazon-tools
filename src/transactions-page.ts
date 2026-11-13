@@ -9,7 +9,12 @@ import { parseOrder } from "./order.ts";
 import { FIND_KEY, overlay, overlayFound, overlayStop, signal } from "./overlay.ts";
 import { logRequest, requestLog } from "./request-log.ts";
 import { leaves } from "./scrape.ts";
-import { parseTransactions, transactionRows } from "./transactions.ts";
+import {
+  cardsUnreadable,
+  parseTransactions,
+  rowsUnreadable,
+  transactionRows,
+} from "./transactions.ts";
 import { isCovered, remember, rememberSweep, sweptSpan, withCached } from "./txn-cache.ts";
 import type { FindQuery, Txn } from "./types.ts";
 
@@ -227,12 +232,16 @@ export async function transactionsPage() {
 
   if (!(await until(() => parseTransactions(document, null).length > 0, 8000, search))) {
     if (search.aborted) return;
+    // Orders on show but no rows read is the page's layout, not Amazon holding back.
+    if (rowsUnreadable(document.body))
+      return unreadable("Couldn't read Amazon's transactions page");
     stop("Amazon didn't show any transactions", THROTTLED);
     return;
   }
   let rows = parseTransactions(document, null);
-  if (!rows.length && /order\s*#\s*\d{3}-\d{7}-\d{7}/i.test(document.body.textContent))
-    return unreadable("Couldn't read Amazon's transactions page");
+  // Every charge would read as a gift card or points payment and never match.
+  if (query.kind === "charge" && cardsUnreadable(rows))
+    return unreadable("Couldn't read the cards on Amazon's transactions page");
   // Without dates the two-week window can't work, and any old charge of the same amount would match.
   if (rows.length && rows.every((r) => !toDay(r.date)))
     return unreadable("Couldn't read the dates on Amazon's transactions page");

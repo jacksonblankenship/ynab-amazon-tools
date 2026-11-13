@@ -16,6 +16,21 @@ export async function fetchTransactions(orderId: string): Promise<Txn[]> {
   return rows;
 }
 
+/**
+ * Rows read, but none shows a card and some show no way of paying at all: the card
+ * numbers have stopped being recognized, and every charge would pass for a credit.
+ * Only telling across a page of rows; one order may really be paid some other way.
+ */
+export const cardsUnreadable = (rows: Txn[]) =>
+  rows.length > 0 && !rows.some((r) => r.kind === "charge") && rows.some((r) => !r.method);
+
+/** The page shows "Order #" lines but none of them read as a transaction. */
+export const rowsUnreadable = (root: Element) =>
+  !transactionRows(root).length &&
+  leaves(root).some(
+    (e) => ORDER_RE.test(txt(e)) && !e.closest("#acs-overlay, .acs-result, .acs-panel"),
+  );
+
 // Reads transactions by what they say, not by how Amazon builds the page: a transaction
 // is the largest block around an "Order #" that holds exactly one dollar amount. Its date
 // and status are inside that block (new layout) or in the nearest heading above it (old
