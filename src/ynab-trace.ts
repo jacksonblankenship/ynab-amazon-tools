@@ -243,17 +243,23 @@ async function fillTrace(body: HTMLElement, t: Trace): Promise<void> {
     return say(line("acs-warn", `YNAB answered with an error (${res.status}).`));
   // A good answer in a shape this script doesn't know: YNAB changed its API.
   if (!txns) return say(reportLine(suite, "acs-warn", "Couldn't read YNAB's answer."));
-  const found = t.charges.map((c) => describeMatch(c, findCharges(txns, c), t, plan));
+  const found = t.charges.map((c) => {
+    const matches = findCharges(txns, c);
+    return { matched: matches.length > 0, ...describeMatch(c, matches, t, plan) };
+  });
   say(
     line(
       "acs-muted",
       `The original order's ${found.length > 1 ? `${found.length} charges` : "charge"} in YNAB:`,
     ),
     ...found.flatMap((f) => f.nodes),
-    ...categorySummary(
-      found.flatMap((f) => f.cats),
-      t,
-    ),
+    // With no charge found, "not categorized yet" would be wrong; the warning above says why.
+    ...(found.some((f) => f.matched)
+      ? categorySummary(
+          found.flatMap((f) => f.cats),
+          t,
+        )
+      : []),
   );
 }
 
