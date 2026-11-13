@@ -1,0 +1,626 @@
+{
+  "props": {
+    "pageProps": {
+      "token": "REDACTED-token",
+      "metricsToken": "REDACTED-metricsToken",
+      "slateToken": "REDACTED-slateToken",
+      "clientSideSecureEndpoint": "https://apx-security.amazon.com",
+      "shouldUseClientSecureEndpointForBillingAddress": false,
+      "manageWalletRequest": {
+        "customerId": "REDACTED-CUSTOMER",
+        "marketplaceId": "ATVPDKIKX0DER",
+        "requestContext": {
+          "clientInfo": {
+            "clientId": "YA:MPO",
+            "domainName": "www.amazon.com"
+          },
+          "diagnosticInfo": {
+            "sessionId": "REDACTED-SESSION"
+          },
+          "localeInfo": {
+            "locale": "en_US"
+          },
+          "surfaceInfo": {
+            "clientApplicationType": "browser",
+            "mshopAppVersion": "",
+            "surfaceType": "desktop",
+            "userAgent": "REDACTED-UA"
+          },
+          "traceInfo": {
+            "requestId": "REDACTED-REQUEST"
+          }
+        },
+        "tabName": "ViewTransactions",
+        "transactionViewRequest": {}
+      },
+      "marketplaceId": "en_US",
+      "state": {
+        "multipleOrderDisplayState": {
+          "multipleOrderDisplayStatus": false,
+          "orderData": []
+        },
+        "transactionResponseState": {
+          "visibleTransactionResponse": {
+            "transactionList": [
+              {
+                "formattedAmount": "-$105.68",
+                "formattedDate": "Sep 13, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-7793613-8809878",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-7793613-8809878"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              },
+              {
+                "formattedAmount": "-$64.92",
+                "formattedDate": "Sep 13, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-2900748-4386024",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-2900748-4386024"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              },
+              {
+                "formattedAmount": "-$15.44",
+                "formattedDate": "Sep 13, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-7793613-8809878",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-7793613-8809878"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Amazon Chase Co-Branded Credit Card Rewards"
+                }
+              },
+              {
+                "formattedAmount": "-$43.24",
+                "formattedDate": "Sep 12, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-2900748-4386024",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-2900748-4386024"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              },
+              {
+                "formattedAmount": "-$66.21",
+                "formattedDate": "Sep 12, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-4553488-1568332",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-4553488-1568332"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              },
+              {
+                "formattedAmount": "-$90.90",
+                "formattedDate": "Sep 11, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-4367560-2462513",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-4367560-2462513"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              },
+              {
+                "formattedAmount": "+$68.64",
+                "formattedDate": "Sep 10, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-0271446-2821572",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-0271446-2821572"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Refunded",
+                  "amountDetailsStatusType": "Refund"
+                },
+                "transactionFilterTags": [
+                  "REFUND"
+                ],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              },
+              {
+                "formattedAmount": "+$76.38",
+                "formattedDate": "Sep 10, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-6672198-4320208",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-6672198-4320208"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Refunded",
+                  "amountDetailsStatusType": "Refund"
+                },
+                "transactionFilterTags": [
+                  "REFUND"
+                ],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              },
+              {
+                "formattedAmount": "-$40.89",
+                "formattedDate": "Sep 10, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-4553488-1568332",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-4553488-1568332"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Amazon Chase Co-Branded Credit Card Rewards"
+                }
+              },
+              {
+                "formattedAmount": "-$236.52",
+                "formattedDate": "Sep 10, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-7767348-8987501",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-7767348-8987501"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              },
+              {
+                "formattedAmount": "-$136.76",
+                "formattedDate": "Sep 10, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-7767348-8987501",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-7767348-8987501"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              },
+              {
+                "formattedAmount": "-$23.24",
+                "formattedDate": "Sep 10, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-4442968-2608428",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-4442968-2608428"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              },
+              {
+                "formattedAmount": "-$52.16",
+                "formattedDate": "Sep 09, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-7767348-8987501",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-7767348-8987501"
+                  },
+                  {
+                    "orderDisplayString": "Order #114-4442968-2608428",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-4442968-2608428"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Amazon Chase Co-Branded Credit Card Rewards"
+                }
+              },
+              {
+                "formattedAmount": "-$22.71",
+                "formattedDate": "Sep 09, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-0890458-9035361",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-0890458-9035361"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              },
+              {
+                "formattedAmount": "-$42.93",
+                "formattedDate": "Sep 09, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-0890458-9035361",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-0890458-9035361"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              },
+              {
+                "formattedAmount": "-$41.96",
+                "formattedDate": "Sep 09, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-3317431-5179528",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-3317431-5179528"
+                  }
+                ],
+                "statementDescriptor": "Amazon.com",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              },
+              {
+                "formattedAmount": "-$62.52",
+                "formattedDate": "Sep 09, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-0890458-9035361",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-0890458-9035361"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              },
+              {
+                "formattedAmount": "-$95.12",
+                "formattedDate": "Sep 09, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-3317431-5179528",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-3317431-5179528"
+                  }
+                ],
+                "statementDescriptor": "",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Amazon Gift Card"
+                }
+              },
+              {
+                "formattedAmount": "-$908.00",
+                "formattedDate": "Sep 08, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-7381963-6932668",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-7381963-6932668"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Charged",
+                  "amountDetailsStatusType": "Charge"
+                },
+                "transactionFilterTags": [],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              },
+              {
+                "formattedAmount": "+$0.58",
+                "formattedDate": "Sep 08, 2026",
+                "orderData": [
+                  {
+                    "orderDisplayString": "Order #114-1336266-1018068",
+                    "orderDetailsUrl": "https://www.amazon.com/gp/css/summary/edit.html?orderID=114-1336266-1018068"
+                  }
+                ],
+                "statementDescriptor": "AMZN Mktp US",
+                "statusInfo": {
+                  "status": "Approved",
+                  "label": "Refunded",
+                  "amountDetailsStatusType": "Refund"
+                },
+                "transactionFilterTags": [
+                  "REFUND"
+                ],
+                "paymentMethodDisplayStringData": {
+                  "paymentMethodName": "Rewards Visa",
+                  "paymentMethodNumber": {
+                    "prefix": "••••",
+                    "lastDigits": "0257"
+                  }
+                }
+              }
+            ],
+            "commonOrderDisplayStrings": {
+              "multipleOrderDisplayTitle": "Select an order",
+              "multipleOrderDisplayText": "This transaction included multiple orders. Select an order to view your Order Details:"
+            },
+            "layoutStrings": {
+              "emptyTransactionString": "",
+              "startShoppingButtonString": "",
+              "giftCardActivityString": [
+                {
+                  "content": "View ",
+                  "bold": false
+                },
+                {
+                  "content": "gift card activity",
+                  "bold": false,
+                  "action": {
+                    "type": "Redirect",
+                    "url": "/gc/balance?ref_=upx_wallet_gc_transactions"
+                  }
+                },
+                {
+                  "content": " to see gift card refunds.",
+                  "bold": false
+                }
+              ],
+              "searchPlaceholderString": "Search by amount, order ID, or descriptor",
+              "previousPageButtonString": "Previous Page",
+              "nextPageButtonString": "Next Page",
+              "noMatchingTransactionsTitleString": "No results found",
+              "noMatchingTransactionsDescriptionString": "Try another search or adjust selected filters."
+            }
+          },
+          "hasMore": true,
+          "isDataReady": true,
+          "lastEvaluatedPageKey": "eyJwYWdlIjoiZml4dHVyZS1jdXJzb3IifQ==",
+          "transactionFilterPills": [
+            {
+              "tags": [
+                "DECLINED",
+                "REFUND",
+                "RETRO_CHARGE"
+              ],
+              "pillLabel": "For your review",
+              "pillBehavior": "EXCLUSIVE",
+              "pillSelectedDescription": "Showing refunds, declines, and reapplied charges"
+            },
+            {
+              "tags": [
+                "REFUND"
+              ],
+              "pillLabel": "Refunds",
+              "pillBehavior": "COMBINABLE"
+            },
+            {
+              "tags": [
+                "SUBSCRIPTION"
+              ],
+              "pillLabel": "Memberships & subscriptions",
+              "pillBehavior": "COMBINABLE"
+            },
+            {
+              "tags": [
+                "RETRO_CHARGE"
+              ],
+              "pillLabel": "Retrocharge",
+              "pillBehavior": "COMBINABLE"
+            }
+          ],
+          "uiTheme": "AUI",
+          "isRTL": false
+        },
+        "transactionPageLoadingSpinnerState": {
+          "isActive": false
+        }
+      },
+      "tabName": "ViewTransactions",
+      "manageErrorApplicationState": {
+        "manageErrorState": {
+          "hasError": false,
+          "errorSourceName": "NONE",
+          "isThrottledError": false
+        }
+      },
+      "request": {
+        "applicationInstanceTraceId": "REDACTED-TRACE",
+        "marketplaceId": "ATVPDKIKX0DER",
+        "locale": "en_US",
+        "metricContext": {},
+        "isDebug": false,
+        "widgetName": "ViewTransactions",
+        "stage": "prod",
+        "journeyEventsPublishEnabled": true
+      },
+      "enableSadOverlayFeature": false,
+      "useUpxAddress": true,
+      "isTransactionHistoryExperimentEnabled": false
+    },
+    "__N_SSP": true
+  },
+  "page": "/transactions",
+  "query": {},
+  "buildId": "7hrTe7eg1UNSq5xYKx8D6",
+  "assetPrefix": "https://cdn.manage.na.us-east-1.iris.apx.amazon.dev",
+  "runtimeConfig": {},
+  "isFallback": false,
+  "gssp": true
+}

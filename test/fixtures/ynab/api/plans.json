@@ -1,0 +1,47 @@
+{
+  "data": {
+    "plans": [
+      {
+        "id": "b49ec261-e368-45d9-8d7c-be85300bf1d4",
+        "name": "Household Budget",
+        "last_modified_on": "2026-09-18T16:00:50Z",
+        "first_month": "2026-08-01",
+        "last_month": "2026-09-01",
+        "date_format": {
+          "format": "YYYY-MM-DD"
+        },
+        "currency_format": {
+          "iso_code": "USD",
+          "example_format": "123,456.78",
+          "decimal_digits": 2,
+          "decimal_separator": ".",
+          "symbol_first": true,
+          "group_separator": ",",
+          "currency_symbol": "$",
+          "display_symbol": true
+        }
+      },
+      {
+        "id": "5f4df66c-de7f-49de-9ccc-9dc222ec6379",
+        "name": "Old Budget (Archived on 2026-08-16)",
+        "last_modified_on": "2026-08-17T16:55:12Z",
+        "first_month": "2023-01-01",
+        "last_month": "2026-09-01",
+        "date_format": {
+          "format": "YYYY-MM-DD"
+        },
+        "currency_format": {
+          "iso_code": "USD",
+          "example_format": "123,456.78",
+          "decimal_digits": 2,
+          "decimal_separator": ".",
+          "symbol_first": true,
+          "group_separator": ",",
+          "currency_symbol": "$",
+          "display_symbol": true
+        }
+      }
+    ],
+    "default_plan": null
+  }
+}
