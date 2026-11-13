@@ -21,8 +21,10 @@
 - **Split-ready amounts.** When Amazon bills one order as several charges, it
   shows which charge paid for which items, tax and shipping included. On any
   order page, **Match charges to items** shows this for the whole order.
-- **Refunds in the right category.** It finds the charge a refund reverses and
-  shows the YNAB category that charge was filed under.
+- **Refunds in the right category.** Click the search icon on a refund. The
+  Amazon page tells you which YNAB category it goes back to, and names the one
+  split line when the original charge was split. Your YNAB tab shows the same
+  answer.
 
 ## Install
 
@@ -48,6 +50,10 @@ you're already signed in to. It never sees your passwords.
   the same way. Saved transactions are cleared when you sign in to a different
   Amazon account, or any time with **Forget saved Amazon transactions** in
   Tampermonkey's menu.
+- **Refund answers show on Amazon's page.** For a refund, the Amazon page shows
+  YNAB category names and amounts, so Amazon's page can read them. It never
+  shows memos, payees, or account names there. The token is only ever typed in
+  on YNAB.
 - **The YNAB token is optional.** Only refund categories need it. You create a
   [personal access token](https://api.ynab.com/#personal-access-tokens) in YNAB.
   The script keeps it in Tampermonkey, sends it only to `api.ynab.com`, and uses
