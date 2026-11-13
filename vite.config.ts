@@ -12,6 +12,10 @@ export default defineConfig({
         namespace: "amazon-charge-finder-ynab",
         homepageURL: "https://github.com/jacksonblankenship/ynab-amazon-tools",
         supportURL: "https://github.com/jacksonblankenship/ynab-amazon-tools/issues",
+        // Always the newest release, so Tampermonkey's update checks see new versions no
+        // matter which release link the script was installed from.
+        downloadURL:
+          "https://github.com/jacksonblankenship/ynab-amazon-tools/releases/latest/download/amazon-charge-finder.user.js",
         description:
           "Shows which Amazon card charge paid for which items, so you can categorize or split it in YNAB. Hover an Amazon transaction in YNAB and click the search icon to jump straight to that charge's items. For a refund, it traces the original charge back to its YNAB category.",
         match: [
