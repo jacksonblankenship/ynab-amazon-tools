@@ -1,5 +1,4 @@
 // Order details page: parse, fetch the order's charges, match them, and show the result.
-import { GM_setValue } from "$";
 import { nearest } from "./dates.ts";
 import { $, el, line } from "./lib/dom.ts";
 import { errMsg, PageChanged } from "./lib/errors.ts";
@@ -8,11 +7,12 @@ import { searchIcon } from "./lib/suite.ts";
 import { solve } from "./matcher.ts";
 import { parseOrder, priceItems } from "./order.ts";
 import { overlayDone, overlayFound, overlayStop, signal } from "./overlay.ts";
-import { refundPanel, TRACE_KEY, traceRefund } from "./refund.ts";
+import { answerRefund, refundPanel, traceRefund } from "./refund.ts";
 import { card, renderFocus, renderOrder, type Shown } from "./render.ts";
 import { fetchTransactions } from "./transactions.ts";
 import { remember } from "./txn-cache.ts";
 import type { Focus, ParsedOrder, Txn } from "./types.ts";
+import { planIn } from "./ynab-lookup.ts";
 
 const unreadable = () =>
   overlayStop("Couldn't read this order page", "Amazon may have changed its layout.", [], {
@@ -44,12 +44,7 @@ export async function orderPage() {
     return;
   }
   // Only now, so a cancelled lookup doesn't reach the YNAB tab.
-  if (shown.trace)
-    try {
-      GM_setValue(TRACE_KEY, shown.trace);
-    } catch {
-      /* ignore */
-    }
+  if (shown.trace) void answerRefund(shown.panel, shown.trace, focus.plan);
   const cards = shown.boxes.map(card);
   const top = Math.min(...cards.map((c) => c.getBoundingClientRect().top));
   if (Number.isFinite(top)) window.scrollTo({ top: window.scrollY + top - 16 });
@@ -183,10 +178,14 @@ function launcher(parsed: ParsedOrder, panel?: HTMLElement) {
   });
 }
 
-/** Order page opened from YNAB: #acs-charge=1999&acs-on=January%205%2C%202026[&acs-kind=refund] */
+/**
+ * Order page opened from YNAB:
+ * #acs-charge=1999&acs-on=January%205%2C%202026[&acs-kind=refund[&acs-plan=<YNAB plan id>]]
+ */
 export function focusTarget(): Focus | null {
   const h = new URLSearchParams(location.hash.slice(1));
   const amount = Number(h.get("acs-charge"));
   const kind = h.get("acs-kind") === "refund" ? "refund" : "charge";
-  return amount ? { amount, date: h.get("acs-on") || "", kind } : null;
+  const plan = planIn(h.get("acs-plan") ?? "");
+  return amount ? { amount, date: h.get("acs-on") || "", kind, ...(plan ? { plan } : {}) } : null;
 }

@@ -20,12 +20,34 @@ afterEach(() => {
 });
 
 /** Arrive on the transactions page from YNAB, looking for `amount` cents near `date`. */
-function arriveFromYnab(amount: number, date: string) {
+function arriveFromYnab(amount: number, date: string, extra = "") {
   history.replaceState(
     null,
     "",
-    `/cpe/yourpayments/transactions#acs-find=${amount}&acs-date=${date}`,
+    `/cpe/yourpayments/transactions#acs-find=${amount}&acs-date=${date}${extra}`,
   );
+}
+
+/** A $12.34 card charge for order `id`, as the page's startup data lists it. */
+const row = (id: string) => ({
+  formattedAmount: "-$12.34",
+  formattedDate: "Sep 10, 2026",
+  statusInfo: { label: "Charged" },
+  orderData: [{ orderDisplayString: `Order #${id}` }],
+  paymentMethodDisplayStringData: {
+    paymentMethodName: "Visa",
+    paymentMethodNumber: { lastDigits: "1234" },
+  },
+});
+/** The page's startup data, listing `rows`. */
+function nextData(rows: unknown[]) {
+  const s = document.createElement("script");
+  s.id = "__NEXT_DATA__";
+  s.type = "application/json";
+  s.textContent = JSON.stringify({
+    props: { pageProps: { state: { transactionResponseState: { transactionsList: rows } } } },
+  });
+  document.body.append(s);
 }
 
 /** Gaps in ms between consecutive times. */
@@ -56,25 +78,34 @@ describe("scrolling for older transactions", () => {
 });
 
 describe("previewing equally likely orders", () => {
+  test("each refund's link carries the YNAB plan on to the order page", async () => {
+    const plan = "b49ec261-e368-45d9-8d7c-be85300bf1d4";
+    nextData(
+      ["114-1111111-1111111", "114-2222222-2222222"].map((id) => ({
+        ...row(id),
+        formattedAmount: "+$12.34",
+        statusInfo: { label: "Refunded" },
+      })),
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("<html></html>")),
+    );
+    arriveFromYnab(1234, "2026-09-11", `&acs-kind=refund&acs-plan=${plan}`);
+    await transactionsPage();
+    await vi.runAllTimersAsync();
+    const links = [...document.querySelectorAll<HTMLAnchorElement>("a[href*='order-details']")];
+    expect(links).toHaveLength(2);
+    for (const a of links) {
+      const h = new URLSearchParams(new URL(a.href).hash.slice(1));
+      expect(h.get("acs-kind")).toBe("refund");
+      expect(h.get("acs-plan")).toBe(plan);
+    }
+  });
+
   test("fetches each order's contents a second apart, not all at once", async () => {
     const orders = ["114-1111111-1111111", "114-2222222-2222222", "114-3333333-3333333"];
-    const rows = orders.map((id) => ({
-      formattedAmount: "-$12.34",
-      formattedDate: "Sep 10, 2026",
-      statusInfo: { label: "Charged" },
-      orderData: [{ orderDisplayString: `Order #${id}` }],
-      paymentMethodDisplayStringData: {
-        paymentMethodName: "Visa",
-        paymentMethodNumber: { lastDigits: "1234" },
-      },
-    }));
-    const s = document.createElement("script");
-    s.id = "__NEXT_DATA__";
-    s.type = "application/json";
-    s.textContent = JSON.stringify({
-      props: { pageProps: { state: { transactionResponseState: { transactionsList: rows } } } },
-    });
-    document.body.append(s);
+    nextData(orders.map(row));
     const fetchedAt: number[] = [];
     vi.stubGlobal(
       "fetch",

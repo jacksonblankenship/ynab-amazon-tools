@@ -10,7 +10,7 @@ import transactionsHtml from "../test/fixtures/amazon/order-refund.transactions.
 import plansJson from "../test/fixtures/ynab/api/plans.json?raw";
 import planTxnsJson from "../test/fixtures/ynab/api/plan-transactions.json?raw";
 import { parseOrder, priceItems } from "./order.ts";
-import { TRACE_KEY, traceRefund } from "./refund.ts";
+import { answerRefund, refundPanel, TRACE_KEY, traceRefund } from "./refund.ts";
 import { parseTransactions } from "./transactions.ts";
 import type { Trace } from "./types.ts";
 import { ynabTrace } from "./ynab-trace.ts";
@@ -44,6 +44,8 @@ interface YnabTxn {
   date: string;
   amount: number;
   payee_name: string | null;
+  account_name?: string;
+  memo?: string | null;
   category_name: string | null;
   transfer_account_id: string | null;
   deleted: boolean;
@@ -368,5 +370,102 @@ describe("handing the trace from the Amazon tab to the YNAB tab", () => {
     openYnab(() => ok(planTxns()));
     expect(panel()).toBeNull();
     expect(gm.requests()).toHaveLength(0);
+  });
+});
+
+// ---- The Amazon tab asks YNAB itself ----
+
+/** The Amazon order page answering a refund, with YNAB's API answering with `respond`. */
+async function answerOnAmazon(
+  respond: (req: GmRequest) => GmReply,
+  { token = FAKE_TOKEN as string | null, plan = PLAN as string | null, trace = refundTrace() } = {},
+) {
+  history.replaceState(null, "", "/your-orders/order-details?orderID=114-0271446-2821572");
+  if (token) gm.seed(TOKEN_KEY, token);
+  gm.respond(respond);
+  const amazonPanel = refundPanel(trace);
+  await answerRefund(amazonPanel, trace, plan ?? undefined);
+  return amazonPanel;
+}
+const handedOver = () => gm.get(TRACE_KEY) as Trace;
+
+describe("the refund's category on the Amazon page", () => {
+  test("names the category, then the refunded items, after one GET to YNAB with the plan", async () => {
+    const trace = {
+      ...refundTrace(),
+      itemSets: [[{ title: "Packable Rain Jacket", units: 1, amount: 6864 }]],
+    };
+    const p = await answerOnAmazon(() => ok(planTxns()), { trace });
+    expectPutBack("🐷 Fun Money A");
+    const text = p.textContent ?? "";
+    expect(text.indexOf("Fun Money A")).toBeLessThan(text.indexOf("Rain Jacket"));
+    expect(gm.requests()).toEqual([
+      {
+        method: "GET",
+        url: `https://api.ynab.com/v1/plans/${PLAN}/transactions?since_date=2026-08-15`,
+        headers: { Authorization: `Bearer ${FAKE_TOKEN}` },
+      },
+    ]);
+  });
+
+  test("names the one split line that matches", async () => {
+    const split = {
+      category_name: "Split",
+      subtransactions: [
+        { amount: -68640, category_name: "Baby", deleted: false },
+        { amount: -11440, category_name: "Household", deleted: false },
+      ],
+    };
+    await answerOnAmazon(() => ok(planTxns(byId(AUG_21, split)).filter((t) => t.id !== AUG_23)));
+    expect(advice()).toBe("Put $68.64 back in Baby.");
+  });
+
+  test("shows only categories and amounts from YNAB: no memo, account or plan name", async () => {
+    const memo = { memo: "gift for Sam", account_name: "Joint Checking" };
+    const p = await answerOnAmazon((r) => {
+      if (r.url.endsWith("/v1/plans")) return plans();
+      if (r.url.includes(`/plans/${ARCHIVED}/`)) return ok(planTxns(byId(AUG_21, memo)));
+      return ok([]);
+    });
+    expectPutBack("🐷 Fun Money A");
+    expect(p.textContent).not.toMatch(/gift for Sam|Joint Checking|Store Rewards|Old Budget/);
+    expect(p.querySelector("a[href*='ynab']")).toBeNull();
+    expect(ynabOnly()).toBe(true);
+    expect(gm.requests().every((r) => r.method === "GET")).toBe(true);
+  });
+
+  test.each([
+    ["no token", { token: null }],
+    ["no YNAB plan", { plan: null }],
+  ])("with %s, it says the YNAB tab has the answer and asks nothing", async (_name, opts) => {
+    const p = await answerOnAmazon(() => ok(planTxns()), opts);
+    expect(p.textContent).toMatch(/YNAB tab/);
+    expect(p.querySelector("form, input")).toBeNull();
+    expect(gm.requests()).toHaveLength(0);
+    expect(handedOver().lookup).toBeUndefined();
+  });
+
+  test("a rejected token isn't forgotten or asked for on Amazon; the YNAB tab handles it", async () => {
+    const p = await answerOnAmazon(() => ({ status: 401 }));
+    expect(p.textContent).toMatch(/didn't accept the saved token/);
+    expect(p.querySelector("form, input")).toBeNull();
+    expect(gm.get(TOKEN_KEY)).toBe(FAKE_TOKEN);
+    expect(handedOver().lookup).toBeUndefined();
+  });
+
+  test("the YNAB tab shows the Amazon tab's answer without asking YNAB again", async () => {
+    await answerOnAmazon(() => ok(planTxns()));
+    const trace = handedOver();
+    expect(trace.lookup).toBeDefined();
+    document.body.innerHTML = "";
+    gm.reset();
+    openYnab(() => "error");
+    await handOver(trace);
+    expectPutBack("🐷 Fun Money A");
+    expect(gm.requests()).toHaveLength(0);
+    // The full view, with the account linked absolutely, so it works from either tab.
+    expect(panel()?.querySelector("a")?.getAttribute("href")).toMatch(
+      new RegExp(`^https://app\\.ynab\\.com/${PLAN}/accounts/`),
+    );
   });
 });

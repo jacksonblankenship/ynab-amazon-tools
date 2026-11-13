@@ -1,13 +1,7 @@
 // Refund tracing, YNAB side: take the trace the Amazon tab left, find the order's
 // original charges in YNAB, and say which category the refund belongs in.
-import {
-  GM_addValueChangeListener,
-  GM_getValue,
-  GM_registerMenuCommand,
-  GM_setValue,
-  GM_xmlhttpRequest,
-} from "$";
-import { DAY, readableDates, toDay } from "./dates.ts";
+import { GM_addValueChangeListener, GM_getValue, GM_registerMenuCommand, GM_setValue } from "$";
+import { readableDates } from "./dates.ts";
 import { $$, el, esc, line } from "./lib/dom.ts";
 import { errMsg } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
@@ -16,40 +10,11 @@ import { reportLine } from "./lib/suite.ts";
 import { suite } from "./overlay.ts";
 import { refundHint, TRACE_KEY } from "./refund.ts";
 import { short } from "./render.ts";
-import type { Trace } from "./types.ts";
-import { AMAZON_PAYEE } from "./ynab-page.ts";
+import type { RefundLookup, Trace } from "./types.ts";
+import { lookUpRefund, planIn, refundAnswer, TOKEN_KEY } from "./ynab-lookup.ts";
 
-const TOKEN_KEY = "ynab-token";
 /** A trace older than this is from an earlier refund lookup; don't show it. */
 const TRACE_MS = 6e5;
-
-// The parts of YNAB's API transaction this script reads. Amounts are milliunits (cents × 10).
-interface YnabSub {
-  amount: number;
-  deleted: boolean;
-  category_name?: string | null;
-  memo?: string | null;
-}
-interface YnabTxn extends YnabSub {
-  date: string;
-  payee_name?: string | null;
-  account_id?: string;
-  account_name?: string;
-  transfer_account_id?: string | null;
-  subtransactions?: YnabSub[];
-}
-interface YnabPlan {
-  id: string;
-  name: string;
-  first_month?: string | null;
-  last_month?: string | null;
-  last_modified_on?: string | null;
-}
-/** Where a charge was found, when it wasn't the plan this tab is on. */
-interface Elsewhere {
-  id: string;
-  name: string;
-}
 
 function isTrace(v: unknown): v is Trace {
   if (typeof v !== "object" || v === null) return false;
@@ -61,151 +26,73 @@ function isTrace(v: unknown): v is Trace {
     "amount" in t.refund &&
     typeof t.refund.amount === "number" &&
     Array.isArray(t.charges) &&
-    Array.isArray(t.itemSets)
+    Array.isArray(t.itemSets) &&
+    (t.lookup === undefined ||
+      (typeof t.lookup === "object" && t.lookup !== null && "charges" in t.lookup))
   );
 }
 
-// The token lives in Tampermonkey's own storage (never the page's) and only goes to api.ynab.com.
-function ynabGet(path: string, token: string): Promise<{ status: number; body: unknown }> {
-  return new Promise((resolve, reject) => {
-    GM_xmlhttpRequest({
-      method: "GET",
-      url: `https://api.ynab.com/v1${path}`,
-      headers: { Authorization: `Bearer ${token}` },
-      timeout: 20000,
-      onload: (r) => {
-        let body: unknown = null;
-        try {
-          body = JSON.parse(r.responseText);
-        } catch {
-          /* not JSON; the status says what happened */
-        }
-        resolve({ status: r.status, body });
-      },
-      onerror: () => reject(new Error("Couldn't reach YNAB.")),
-      ontimeout: () => reject(new Error("YNAB took too long to answer.")),
-    });
-  });
-}
-
-const ynabDay = (iso: string) => Math.round(Date.parse(`${iso}T00:00:00Z`) / DAY);
-
-// YNAB usually dates a card charge a day or two after Amazon does.
-function findCharges(txns: YnabTxn[], c: Trace["charges"][number]) {
-  const day = toDay(c.date);
-  // Only Amazon's own charges: another store's charge of the same amount is a coincidence,
-  // and a transfer (say, a payment to an Amazon card) is never the order's charge.
-  return txns
-    .filter(
-      (x) =>
-        !x.deleted &&
-        !x.transfer_account_id &&
-        x.amount === -c.amount * 10 &&
-        AMAZON_PAYEE.test(x.payee_name || ""),
-    )
-    .map((x) => ({ x, d: day == null ? 0 : ynabDay(x.date) - day }))
-    .filter((m) => m.d >= -3 && m.d <= 7)
-    .sort((a, b) => Math.abs(a.d) - Math.abs(b.d))
-    .map((m) => m.x);
-}
-
-// The split line(s) of the original charge that hold the refunded items: a line whose
-// amount is one item's share, all the refunded items' shares together, or the refund itself.
-function refundLines(subs: YnabSub[], t: Trace) {
-  const shares = [
-    t.refund.amount,
-    ...t.itemSets.flatMap((set) => [
-      ...set.map((x) => x.amount),
-      set.reduce((a, x) => a + x.amount, 0),
-    ]),
-  ];
-  return subs.filter((s) => shares.some((v) => Math.abs(-s.amount / 10 - v) <= 3));
-}
-
-const realCategory = (n: string | null | undefined) =>
-  n && !/^(uncategorized|split)/i.test(n) ? n : "";
-
 // One original charge as a small table: its category, or each split line, with a link
-// to its account. A split line matching the refunded items' share is emphasized as a hint.
-function describeMatch(
-  c: Trace["charges"][number],
-  matches: YnabTxn[],
-  t: Trace,
-  plan: string | undefined,
-  other?: Elsewhere,
-): { nodes: HTMLElement[]; cats: string[]; hits: string[] | null } {
-  const [x, alt] = matches;
+// to its account. A split line matching the refund is emphasized.
+function describeMatch({ charge: c, found: x }: RefundLookup["charges"][number]): HTMLElement[] {
   if (!x)
-    return {
-      nodes: [
-        line(
-          "acs-warn",
-          `No ${fmt(c.amount)} Amazon charge in YNAB within a week of ${c.date || "the Amazon date"}. It may be in another plan, or entered with a different amount.`,
-        ),
-      ],
-      cats: [],
-      hits: [],
-    };
-  const subs = (x.subtransactions || []).filter((s) => !s.deleted);
-  const lines: YnabSub[] = subs.length ? subs : [x];
-  const hits = subs.length ? refundLines(subs, t) : [];
+    return [
+      line(
+        "acs-warn",
+        `No ${fmt(c.amount)} Amazon charge in YNAB within a week of ${c.date || "the Amazon date"}. It may be in another plan, or entered with a different amount.`,
+      ),
+    ];
   const box = el("div", "acs-split");
-  const home = other?.id ?? plan;
+  // Absolute, so the link works whichever tab made the lookup.
   const account =
-    home && x.account_id
-      ? `<a href="/${esc(home)}/accounts/${esc(x.account_id)}">${esc(x.account_name || "account")}</a>`
-      : esc(x.account_name || "");
+    x.plan && x.accountId
+      ? `<a href="https://app.ynab.com/${esc(x.plan)}/accounts/${esc(x.accountId)}">${esc(x.accountName || "account")}</a>`
+      : esc(x.accountName);
   box.appendChild(
     el(
       "div",
       null,
-      `<b>${fmt(c.amount)}</b> on ${esc(readableDates([x.date]))} · ${account}${subs.length ? " · split" : ""}${other ? ` · in your <b>${esc(other.name)}</b> plan` : ""}`,
+      `<b>${fmt(c.amount)}</b> on ${esc(readableDates([x.date]))} · ${account}${x.split ? " · split" : ""}${x.planName ? ` · in your <b>${esc(x.planName)}</b> plan` : ""}`,
     ),
   );
-  const rows = lines
+  const rows = x.lines
     .map(
       (s) =>
-        `<tr${hits.includes(s) ? ' class="acs-hit"' : ""}><td>${esc(realCategory(s.category_name) || "Uncategorized")}${s.memo ? ` <span class="acs-muted">${esc(short(s.memo))}</span>` : ""}</td><td class="acs-r">${fmt(-s.amount / 10)}</td></tr>`,
+        `<tr${s.hit ? ' class="acs-hit"' : ""}><td>${esc(s.category || "Uncategorized")}${s.memo ? ` <span class="acs-muted">${esc(short(s.memo))}</span>` : ""}</td><td class="acs-r">${fmt(s.amount)}</td></tr>`,
     )
     .join("");
   box.appendChild(el("table", null, rows));
   const nodes: HTMLElement[] = [box];
-  const cats = categoriesOf(x);
-  const altCats = alt ? categoriesOf(alt) : [];
-  // Two same-amount charges in different categories: either may be the order's, so neither
-  // category is given as the answer.
-  if (alt && altCats.join("\n") !== cats.join("\n")) {
+  if (x.alt)
     nodes.push(
       line(
         "acs-warn",
-        `There's also a ${fmt(c.amount)} charge on ${readableDates([alt.date])} in ${altCats.join(", ") || "no category"}. If that's the one, use it instead.`,
+        `There's also a ${fmt(c.amount)} charge on ${readableDates([x.alt.date])} in ${x.alt.categories.join(", ") || "no category"}. If that's the one, use it instead.`,
       ),
     );
-    cats.push(...altCats);
-    return { nodes, cats, hits: null };
-  }
-  return { nodes, cats, hits: hits.map((s) => realCategory(s.category_name)).filter(Boolean) };
+  return nodes;
 }
 
-/** A charge's categories: its own, or each split line's. */
-function categoriesOf(x: YnabTxn) {
-  const subs = (x.subtransactions || []).filter((s) => !s.deleted);
-  return (subs.length ? subs : [x]).map((s) => realCategory(s.category_name)).filter(Boolean);
-}
-
-// A split line that matches the refund is the answer, unless lines in different categories
-// do, or a second same-amount charge (null hits) leaves the original in doubt.
-function categorySummary(cats: string[], hits: (string[] | null)[], t: Trace) {
-  const hit = hits.includes(null) ? [] : [...new Set(hits.flat())];
-  const all = hit.length === 1 ? hit : [...new Set(cats)];
-  const [one] = all;
-  if (!one) return [line("acs-warn", "None of these charges are categorized in YNAB yet.")];
-  if (all.length === 1) return [line("acs-put", `Put ${fmt(t.refund.amount)} back in ${one}.`)];
+function lookupNodes(l: RefundLookup, t: Trace): HTMLElement[] {
+  const answer = refundAnswer(l, t.refund.amount);
   return [
     line(
-      "acs-put",
-      `This order was in: ${all.join(", ")}. The ${fmt(t.refund.amount)} belongs in one (or more) of these.`,
+      "acs-muted",
+      `The original order's ${l.charges.length > 1 ? `${l.charges.length} charges` : "charge"} in YNAB:`,
     ),
+    ...l.charges.flatMap(describeMatch),
+    ...(l.limited
+      ? [
+          line(
+            "acs-warn",
+            "YNAB is limiting requests, so other plans weren't checked. Try again later.",
+          ),
+        ]
+      : []),
+    // With no charge found, "not categorized yet" would be wrong; the warning above says why.
+    ...(answer
+      ? ["put" in answer ? line("acs-put", answer.put) : line("acs-warn", answer.warn)]
+      : []),
   ];
 }
 
@@ -248,131 +135,18 @@ async function fillTrace(body: HTMLElement, t: Trace): Promise<void> {
         "Amazon didn't show a card charge for this order, so there's nothing to trace.",
       ),
     );
+  // The Amazon tab already asked YNAB: show its answer rather than ask again.
+  if (t.lookup) return say(...lookupNodes(t.lookup, t));
   const token = GM_getValue(TOKEN_KEY, "");
   if (!token) return say(...tokenForm(() => fillTrace(body, t)));
   say(line("acs-muted", "Looking up the original charge in YNAB…"));
-  // From a few days before the earliest charge (or 90 days back, without a date).
-  const days = t.charges.map((c) => toDay(c.date)).filter((d) => d != null);
-  const since = new Date(
-    ((days.length ? Math.min(...days) : Math.round(t.at / DAY) - 90) - 5) * DAY,
-  )
-    .toISOString()
-    .slice(0, 10);
-  const plan = location.pathname.match(/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}/i)?.[0];
-  let res: { status: number; body: unknown };
-  try {
-    res = await ynabGet(`/plans/${plan ?? "last-used"}/transactions?since_date=${since}`, token);
-  } catch (e) {
-    return say(line("acs-warn", errMsg(e)));
-  }
-  if (res.status === 401) {
+  const res = await lookUpRefund(t, planIn(location.pathname), token);
+  if ("lookup" in res) return say(...lookupNodes(res.lookup, t));
+  if (res.badToken) {
     GM_setValue(TOKEN_KEY, "");
-    return say(
-      line("acs-warn", "YNAB didn't accept the saved token."),
-      ...tokenForm(() => fillTrace(body, t)),
-    );
+    return say(line("acs-warn", res.error), ...tokenForm(() => fillTrace(body, t)));
   }
-  if (res.status === 429)
-    return say(
-      line("acs-warn", "YNAB is limiting requests (it allows 200 an hour). Try again later."),
-    );
-  const txns = transactionsIn(res.body);
-  if (res.status !== 200)
-    return say(line("acs-warn", `YNAB answered with an error (${res.status}).`));
-  // A good answer in a shape this script doesn't know: YNAB changed its API.
-  if (!txns) return say(reportLine(suite, "acs-warn", "Couldn't read YNAB's answer."));
-  const matches = t.charges.map((c) => findCharges(txns, c));
-  // After a fresh start the order's charges can be in the old plan; only then look there.
-  const missing = t.charges.filter((_, i) => !matches[i]?.length);
-  const other = await searchOtherPlans(missing, plan, since, token);
-  const found = t.charges.map((c, i) => {
-    const elsewhere = other.found.get(c);
-    const m = elsewhere?.m ?? matches[i] ?? [];
-    return { matched: m.length > 0, ...describeMatch(c, m, t, plan, elsewhere?.p) };
-  });
-  say(
-    line(
-      "acs-muted",
-      `The original order's ${found.length > 1 ? `${found.length} charges` : "charge"} in YNAB:`,
-    ),
-    ...found.flatMap((f) => f.nodes),
-    ...(other.limited
-      ? [
-          line(
-            "acs-warn",
-            "YNAB is limiting requests, so other plans weren't checked. Try again later.",
-          ),
-        ]
-      : []),
-    // With no charge found, "not categorized yet" would be wrong; the warning above says why.
-    ...(found.some((f) => f.matched)
-      ? categorySummary(
-          found.flatMap((f) => f.cats),
-          found.map((f) => f.hits),
-          t,
-        )
-      : []),
-  );
-}
-
-// The user's other plans that could hold these charges, newest first: a plan that began after
-// a charge can't have it. At most two, to keep a miss from costing many requests.
-async function searchOtherPlans(
-  charges: Trace["charges"],
-  current: string | undefined,
-  since: string,
-  token: string,
-) {
-  const found = new Map<Trace["charges"][number], { m: YnabTxn[]; p: Elsewhere }>();
-  if (!charges.length) return { found, limited: false };
-  try {
-    const res = await ynabGet("/plans", token);
-    if (res.status === 429) return { found, limited: true };
-    const months = charges.map((c) => toDay(c.date)).filter((d) => d != null);
-    const first = months.length
-      ? new Date(Math.min(...months) * DAY).toISOString().slice(0, 7)
-      : null;
-    const last = months.length
-      ? new Date(Math.max(...months) * DAY).toISOString().slice(0, 7)
-      : null;
-    const plans = (plansIn(res.body) ?? [])
-      .filter(
-        (p) =>
-          p.id !== current &&
-          (!first || !p.last_month || p.last_month.slice(0, 7) >= first) &&
-          (!last || !p.first_month || p.first_month.slice(0, 7) <= last),
-      )
-      .sort((a, b) => (b.last_modified_on ?? "").localeCompare(a.last_modified_on ?? ""))
-      .slice(0, 2);
-    for (const p of plans) {
-      if (charges.every((c) => found.has(c))) break;
-      const r = await ynabGet(`/plans/${p.id}/transactions?since_date=${since}`, token);
-      if (r.status === 429) return { found, limited: true };
-      const txns = r.status === 200 ? transactionsIn(r.body) : null;
-      for (const c of charges) {
-        const m = txns && !found.has(c) ? findCharges(txns, c) : [];
-        if (m.length) found.set(c, { m, p: { id: p.id, name: p.name } });
-      }
-    }
-  } catch {
-    /* another plan is a bonus; the charge just stays "not found" */
-  }
-  return { found, limited: false };
-}
-
-function plansIn(body: unknown): YnabPlan[] | null {
-  if (typeof body !== "object" || body === null || !("data" in body)) return null;
-  const { data } = body;
-  if (typeof data !== "object" || data === null || !("plans" in data)) return null;
-  return Array.isArray(data.plans) ? data.plans : null;
-}
-
-/** `data.transactions` from a YNAB answer, trusted to be YNAB's documented shape. */
-function transactionsIn(body: unknown): YnabTxn[] | null {
-  if (typeof body !== "object" || body === null || !("data" in body)) return null;
-  const { data } = body;
-  if (typeof data !== "object" || data === null || !("transactions" in data)) return null;
-  return Array.isArray(data.transactions) ? data.transactions : null;
+  say(res.report ? reportLine(suite, "acs-warn", res.error) : line("acs-warn", res.error));
 }
 
 function showTrace(t: Trace) {

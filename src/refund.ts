@@ -1,12 +1,15 @@
 // Refund tracing, Amazon side: refund → refunded items → the charges that may have paid
-// for them. The trace goes to the YNAB tab (ynab-trace.ts), which finds their categories.
-import { $$, line } from "./lib/dom.ts";
-import { must } from "./lib/errors.ts";
+// for them → their categories in YNAB (ynab-lookup.ts). The trace, with what YNAB said, goes
+// to the YNAB tab (ynab-trace.ts), which shows the same answer.
+import { GM_getValue, GM_setValue } from "$";
+import { $, $$, el, esc, line } from "./lib/dom.ts";
+import { errMsg, must } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
 import { resultPanel } from "./lib/result-panel.ts";
 import { suite } from "./overlay.ts";
 import { short } from "./render.ts";
-import type { Order, PricedItem, Trace, Txn } from "./types.ts";
+import type { Order, PricedItem, RefundLookup, Trace, Txn } from "./types.ts";
+import { lookUpRefund, refundAnswer, TOKEN_KEY } from "./ynab-lookup.ts";
 
 /** Where the Amazon tab leaves a trace for the YNAB tab, in Tampermonkey's storage. */
 export const TRACE_KEY = "acs-trace";
@@ -87,16 +90,16 @@ export function refundHint(t: Trace): HTMLElement[] {
   return only && !more.length ? [line("acs-muted", `Probably for: ${itemNames(only)}`)] : [];
 }
 
-/** The refund's panel, floating over the order page, pointing back to YNAB for the categories. */
+/** The refund's panel, floating over the order page. answerRefund fills in its answer. */
 export function refundPanel(t: Trace) {
-  const body: Node[] = [...refundHint(t)];
+  const body: Node[] = [el("div", "acs-answer"), ...refundHint(t)];
   if (t.charges.length)
     body.push(
       line(
         "acs-muted",
         `This order's card charges: ${t.charges.map((c) => `${fmt(c.amount)} on ${c.date || "an unknown date"}`).join(", ")}.`,
       ),
-      line("acs-put", "Switch back to your YNAB tab to see the categories they were in."),
+      el("div", "acs-ynab"),
     );
   else
     body.push(
@@ -117,4 +120,78 @@ export function refundPanel(t: Trace) {
   });
   document.body.appendChild(panel);
   return panel;
+}
+
+/**
+ * Ask YNAB where the refund goes back to, show it on the panel, and hand the trace (with
+ * YNAB's answer, so it isn't asked twice) to the YNAB tab. Without a token or the YNAB plan,
+ * the YNAB tab does the asking. The token form is never put on Amazon's page.
+ */
+export async function answerRefund(panel: HTMLElement, t: Trace, plan: string | undefined) {
+  const answer = $(".acs-answer", panel);
+  const say = (...nodes: Node[]) => answer?.replaceChildren(...nodes);
+  const handOver = (lookup?: RefundLookup) => {
+    try {
+      GM_setValue(TRACE_KEY, lookup ? { ...t, lookup } : t);
+    } catch {
+      /* ignore */
+    }
+  };
+  if (!t.charges.length) return handOver();
+  const token = GM_getValue(TOKEN_KEY, "");
+  if (!token || !plan) {
+    say(line("acs-muted", "Your YNAB tab shows which category this goes back to."));
+    return handOver();
+  }
+  say(line("acs-muted", "Looking up the original charge in YNAB…"));
+  const res = await lookUpRefund(t, plan, token).catch((e: unknown) => ({ error: errMsg(e) }));
+  if (!("lookup" in res)) {
+    say(line("acs-warn", `${res.error} Your YNAB tab will try again.`));
+    return handOver();
+  }
+  say(...amazonAnswer(res.lookup, t));
+  $(".acs-ynab", panel)?.replaceChildren(...amazonDetail(res.lookup));
+  handOver(res.lookup);
+}
+
+// Amazon's page can read the panel, so only categories and amounts from YNAB go on it: no
+// memos, payees, accounts or plan names.
+function amazonAnswer(l: RefundLookup, t: Trace): HTMLElement[] {
+  const answer = refundAnswer(l, t.refund.amount);
+  if (answer)
+    return ["put" in answer ? line("acs-put", answer.put) : line("acs-warn", answer.warn)];
+  return l.charges.map(({ charge: c }) =>
+    line(
+      "acs-warn",
+      `Couldn't find the ${fmt(c.amount)} charge from ${c.date || "this order"} in YNAB. It may be in another plan, or entered with a different amount.`,
+    ),
+  );
+}
+
+/** What the answer rests on: each found charge's categories and amounts. */
+function amazonDetail(l: RefundLookup): HTMLElement[] {
+  const nodes: HTMLElement[] = [];
+  for (const { charge: c, found: x } of l.charges) {
+    if (!x) continue;
+    const box = el("div", "acs-split");
+    box.appendChild(el("div", null, `<b>${fmt(c.amount)}</b> in YNAB${x.split ? ", split" : ""}`));
+    const rows = x.lines
+      .map(
+        (s) =>
+          `<tr${s.hit ? ' class="acs-hit"' : ""}><td>${esc(s.category || "Uncategorized")}</td><td class="acs-r">${fmt(s.amount)}</td></tr>`,
+      )
+      .join("");
+    box.appendChild(el("table", null, rows));
+    nodes.push(box);
+    if (x.alt)
+      nodes.push(
+        line(
+          "acs-warn",
+          `YNAB has another ${fmt(c.amount)} Amazon charge near this date, in ${x.alt.categories.join(", ") || "no category"}. Either may be this order's.`,
+        ),
+      );
+  }
+  if (l.limited)
+    nodes.push(line("acs-warn", "YNAB is limiting requests, so other plans weren't checked."));
+  return nodes;
 }

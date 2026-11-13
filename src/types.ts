@@ -122,6 +122,8 @@ export interface Focus {
   amount: number;
   date: string;
   kind: "charge" | "refund";
+  /** The YNAB plan the lookup came from, for a refund's category lookup. */
+  plan?: string;
 }
 
 export interface FindQuery {
@@ -130,6 +132,7 @@ export interface FindQuery {
   kind: string;
   pages: number;
   started: number;
+  plan?: string;
 }
 
 /** A refund traced back to its order, handed from the Amazon tab to the YNAB tab. */
@@ -141,6 +144,40 @@ export interface Trace {
   itemSets: { title: string; units: number; amount: number }[][];
   /** All of the order's card charges, any of which the refund may belong to. */
   charges: { amount: number; date: string; method: string }[];
+  /** The YNAB lookup, when the Amazon tab already made it, so the YNAB tab needn't ask again. */
+  lookup?: RefundLookup;
   /** Set once a YNAB tab has shown it, so it shows once. */
   shown?: boolean;
+}
+
+/** One YNAB charge line: its category (or each split line's). Amounts in cents. */
+export interface YnabLine {
+  category: string;
+  memo: string;
+  amount: number;
+  /** A split line that matches the refund. */
+  hit: boolean;
+}
+
+/** A refund's original charges as found in YNAB. Plain data, so it can go in a Trace. */
+export interface RefundLookup {
+  charges: {
+    /** The Amazon charge looked for. */
+    charge: Trace["charges"][number];
+    /** The nearest YNAB charge of that amount; null when there's none. */
+    found: {
+      date: string;
+      plan: string | null;
+      /** Set when it was found in another plan than the one asked about. */
+      planName: string | null;
+      accountId: string | null;
+      accountName: string;
+      split: boolean;
+      lines: YnabLine[];
+      /** Another same-amount charge in other categories: either may be the order's. */
+      alt: { date: string; categories: string[] } | null;
+    } | null;
+  }[];
+  /** YNAB limited requests, so other plans weren't checked. */
+  limited: boolean;
 }

@@ -14,7 +14,7 @@ import listRows from "../test/fixtures/amazon/transactions-list.rows.html?raw";
 import { loadPage } from "../test/html.ts";
 import { solve } from "./matcher.ts";
 import { parseOrder, priceItems } from "./order.ts";
-import { creditRange } from "./order-page.ts";
+import { creditRange, focusTarget } from "./order-page.ts";
 import { fetchTransactions } from "./transactions.ts";
 import type { Txn } from "./types.ts";
 
@@ -110,5 +110,28 @@ describe("how much points or gift cards paid toward an order", () => {
 
   test("without credit transactions, the Order Summary's figure", () => {
     expect(creditRange([], 2640)).toEqual([2640, 2640]);
+  });
+});
+
+describe("opened from YNAB", () => {
+  test("a refund's link carries the YNAB plan; anything but a plan id is dropped", () => {
+    const plan = "b49ec261-e368-45d9-8d7c-be85300bf1d4";
+    history.replaceState(
+      null,
+      "",
+      `/your-orders/order-details#acs-charge=6864&acs-on=September%2010%2C%202026&acs-kind=refund&acs-plan=${plan}`,
+    );
+    expect(focusTarget()).toEqual({
+      amount: 6864,
+      date: "September 10, 2026",
+      kind: "refund",
+      plan,
+    });
+    history.replaceState(
+      null,
+      "",
+      "/your-orders/order-details#acs-charge=6864&acs-kind=refund&acs-plan=..%2Fuser",
+    );
+    expect(focusTarget()).not.toHaveProperty("plan");
   });
 });

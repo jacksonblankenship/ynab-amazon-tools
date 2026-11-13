@@ -72,6 +72,17 @@ describe("hovering an Amazon row", () => {
     });
   });
 
+  test("a refund also passes the YNAB plan on screen; a charge doesn't need it", () => {
+    const plan = "b49ec261-e368-45d9-8d7c-be85300bf1d4";
+    history.replaceState(null, "", `/${plan}/accounts`);
+    openRegister();
+    hover(rowWith("2026-09-11", "$68.64"));
+    expect(search()["acs-plan"]).toBe(plan);
+    hover(rowWith("2026-09-11", "$236.52"));
+    expect(search()["acs-plan"]).toBeUndefined();
+    history.replaceState(null, "", "/");
+  });
+
   test("a split's parent row searches for the whole charge", () => {
     openRegister();
     hover(row(0));
