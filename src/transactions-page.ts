@@ -247,8 +247,14 @@ export async function transactionsPage() {
   const fresh = fromTop ? sweptSpan(rows, false) : null;
   rememberSweep("all", fresh);
   // Together, so a closer match seen before beats a farther one on the page.
-  let hits = findHits(withCached(rows));
+  // Without a date from YNAB any old charge of the same amount would match, so only the page's count.
+  let hits = findHits(targets.length ? withCached(rows) : rows);
   if (hits.length) return open(hits);
+  if (!targets.length)
+    return stop(
+      "Couldn't read the date from YNAB",
+      `No ${fmt(query.amount)} ${kindName} among your ${rows.length} most recent transactions, and older ones can't be searched without a date. Close this and look manually.`,
+    );
   if (isPast(rows)) return notFound("Searched back past that date.");
   // Every transaction within two weeks of the date was seen before, so asking again can't find it.
   const lists: ("all" | "refunds")[] = query.kind === "refund" ? ["all", "refunds"] : ["all"];
