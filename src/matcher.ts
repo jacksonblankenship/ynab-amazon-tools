@@ -6,7 +6,7 @@ import type { Charge, Group, PricedItem, Shipment, Solution, Split, SplitLine } 
 export function partitionsByLevel<T>(xs: readonly T[]): T[][][][] {
   const n = xs.length;
   const all: T[][][] = [];
-  const rgs = new Array<number>(n).fill(0);
+  const rgs = Array.from({ length: n }, () => 0);
   (function rec(i: number, max: number) {
     if (i === n) {
       all.push(Array.from({ length: max + 1 }, (_, g) => xs.filter((_x, k) => rgs[k] === g)));
@@ -61,14 +61,14 @@ export function solve(
       const G: Group[] = slots.map((w) => w.group);
       type Slot = (typeof slots)[number];
       /** The slot each charge is currently assigned to (null = unmatched). */
-      const picked = new Array<Slot | null>(m).fill(null);
+      const picked = Array.from({ length: m }, (): Slot | null => null);
 
       const evaluate = (unmatched: number) => {
         let score = unmatched * 1000;
         let err = 0,
           absorbed = 0,
           absorbing = 0;
-        const absorbedBy = new Array<number>(G.length).fill(0);
+        const absorbedBy = Array.from({ length: G.length }, () => 0);
         for (const w of slots) {
           if (w.count === 0) {
             score += 1000;
@@ -144,7 +144,7 @@ export function splitGroup(items: PricedItem[], groupCharges: Charge[], absorbed
   // Several charges for one delivery: look for a clean item-to-charge partition.
   if (items.length <= 14) {
     const slots = groupCharges.map((charge) => ({ charge, sum: 0, cnt: 0 }));
-    const pick = new Array<number>(items.length);
+    const pick = Array.from({ length: items.length }, () => 0);
     /** Depth-first over item placements; returns the first clean one (charge index per item). */
     const search = (i: number): number[] | null => {
       const item = items[i];

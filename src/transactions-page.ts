@@ -139,7 +139,8 @@ export async function transactionsPage() {
   }
   const save = (v: FindQuery | null) => {
     try {
-      v ? sessionStorage.setItem(FIND_KEY, JSON.stringify(v)) : sessionStorage.removeItem(FIND_KEY);
+      if (v) sessionStorage.setItem(FIND_KEY, JSON.stringify(v));
+      else sessionStorage.removeItem(FIND_KEY);
     } catch {
       /* ignore */
     }
