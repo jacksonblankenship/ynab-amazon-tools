@@ -24,24 +24,42 @@ Amazon order that charge paid for, with the items it covered highlighted.
 
 Updates arrive on their own.
 
-## Your data stays yours
+## What it can access
 
-A browser script that touches your finances should earn your trust, so here is
-exactly what this one does:
+It runs only on amazon.com and app.ynab.com, inside tabs you're already signed
+in to. It never sees your passwords.
 
-- **It only reads.** It never buys, cancels, edits, or deletes anything on Amazon
-  or in YNAB.
-- **It never sees your passwords.** It works inside the Amazon and YNAB tabs
-  you're already signed in to.
-- **Nothing is sent anywhere.** No server, no analytics, no tracking. It runs
-  only on amazon.com and app.ynab.com.
-- **Refund categories are opt-in.** They need a read-only call to YNAB's
-  official API with a [personal access token](https://api.ynab.com/#personal-access-tokens)
-  you provide. The token stays in Tampermonkey and is sent only to
-  `api.ynab.com`. Everything else works without it.
-- **You can check all of this.** The source is in [`src/`](src), and each
-  release is built from it by GitHub Actions. The installed file is readable,
-  not minified, and Tampermonkey shows it to you before you confirm.
+- **It only reads.** It never buys, cancels, edits, or deletes anything on
+  Amazon or in YNAB.
+- **It talks only to Amazon and YNAB.** There's no server behind it, no
+  analytics, and no tracking.
+- **It remembers a little, on your computer.** Amazon transactions it has
+  already looked up (amounts, dates, order numbers) stay in Tampermonkey's
+  storage so it doesn't ask Amazon twice.
+- **The YNAB token is optional.** Only refund categories need it. You create a
+  [personal access token](https://api.ynab.com/#personal-access-tokens) in
+  YNAB, and the script keeps it in Tampermonkey, sends it only to
+  `api.ynab.com`, and uses it only to read. Remove it any time from
+  Tampermonkey's menu.
+
+## Check it yourself
+
+Don't take our word for any of this. The full source is in [`src/`](src), each
+release is built from it by
+[GitHub Actions](.github/workflows/release-please.yml), and the installed file
+isn't minified, so you can read what runs. Tampermonkey shows you the whole
+script before you confirm.
+
+An AI coding agent can do the reading for you. Point it at this repository and
+ask something like:
+
+> Review this Tampermonkey script for anything that could harm me: data sent
+> anywhere other than Amazon or YNAB, changes made to either account, or
+> anything sensitive it stores. Check that the README's claims match the code.
+
+If it finds a problem, please
+[open an issue](https://github.com/jacksonblankenship/ynab-amazon-tools/issues)
+or send a pull request.
 
 ## Good to know
 
@@ -53,4 +71,4 @@ exactly what this one does:
 
 ## License
 
-MIT
+[MIT](LICENSE)
