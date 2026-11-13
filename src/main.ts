@@ -1,5 +1,6 @@
 import "./style.css";
 import { GM_registerMenuCommand } from "$";
+import { checkAccount, forgetAnswers } from "./answers.ts";
 import { guard, ready } from "./lib/boot.ts";
 import { errMsg } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
@@ -36,10 +37,16 @@ declare global {
     try {
       GM_registerMenuCommand("Amazon request log", () => ready(requestLogPanel));
       // If a search says "already checked" for something that is there, start over.
-      GM_registerMenuCommand("Forget saved Amazon transactions", forgetTxns);
+      // Along with what the lines in YNAB were found to be.
+      GM_registerMenuCommand("Forget saved Amazon transactions", () => {
+        forgetTxns();
+        forgetAnswers();
+      });
     } catch {
       /* no menu in this userscript manager */
     }
+    // Signed in to another Amazon account: its saved answers aren't this one's.
+    ready(guard(fail, checkAccount));
   }
   if (location.hostname === "app.ynab.com") {
     ready(

@@ -34,7 +34,7 @@ interface Cache {
 const empty = (): Cache => ({ rows: [], covered: { all: [], refunds: [] } });
 
 // Amazon's own hash of the customer id, on the header's shortcut menu on every signed-in page.
-const account = () =>
+export const amazonAccount = () =>
   document.querySelector("[data-hashed-id]")?.getAttribute("data-hashed-id") || undefined;
 
 // A damaged row or list (hand-edited storage, say) is dropped, not left to break every search.
@@ -75,7 +75,7 @@ function read(): Cache {
 // Where the account can't be told, the cache is used as it is; an untagged one is adopted.
 function load(): Cache {
   const c = read();
-  const now = account();
+  const now = amazonAccount();
   if (!now) return c;
   return c.account && c.account !== now ? { ...empty(), account: now } : { ...c, account: now };
 }

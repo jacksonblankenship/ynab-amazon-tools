@@ -189,3 +189,35 @@ export interface RefundLookup {
   /** YNAB limited requests, so other plans weren't checked. */
   limited: boolean;
 }
+
+/** A YNAB register line, as the YNAB tab saw it: what a saved answer is kept under. */
+export interface YnabRow {
+  /** Cents, as YNAB shows it. */
+  amount: number;
+  kind: "charge" | "refund";
+  /** ISO date, as YNAB shows it. */
+  date: string;
+  /** YNAB's id for the transaction, when the register gave one. */
+  id?: string;
+}
+
+/** What a YNAB line was, worked out on Amazon: small enough to show in YNAB on its own. */
+export interface AnswerBody {
+  orderId: string;
+  /** What the charge paid for, or the refund was probably for. Titles shortened; cents. */
+  items: { title: string; amount: number; qty: number }[];
+  /** False when the amounts are each item's estimated share, not Amazon's own split. */
+  exact: boolean;
+  /**
+   * A refund's category answer: each category it may go back to, with the amount the original
+   * charge put there. Confident names the one category; otherwise it's a guess among them.
+   */
+  category?: { names: { name: string; amount: number }[]; confident: boolean };
+  /** What makes the answer less sure, as shown to the user. */
+  cautions: string[];
+}
+
+/** A saved answer: the line it's for, what it was, and when it was worked out. */
+export interface SavedAnswer extends YnabRow, AnswerBody {
+  at: number;
+}
