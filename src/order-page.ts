@@ -58,6 +58,19 @@ export async function orderPage() {
   launcher(parsed, shown.panel);
 }
 
+/**
+ * How much points or gift cards paid toward this order, as [least, most]. A payment can cover
+ * several orders at once, and Amazon doesn't say how much went to which: this order took
+ * anywhere from none to all of it. Without credit transactions, the Order Summary's figure.
+ */
+export function creditRange(credits: Txn[], summaryCredits: number): [number, number] {
+  if (!credits.length) return [summaryCredits, summaryCredits];
+  const sum = (xs: Txn[]) => xs.reduce((a, c) => a + c.amount, 0);
+  const own = sum(credits.filter((c) => c.orderIds.length <= 1));
+  const shared = sum(credits.filter((c) => c.orderIds.length > 1));
+  return [own, own + shared];
+}
+
 /** Load the order's charges and show what they paid for: the one asked about, or all of them. */
 async function match(parsed: ParsedOrder, focus: Focus | null): Promise<Shown> {
   const priced = priceItems(parsed);
@@ -81,14 +94,8 @@ async function match(parsed: ParsedOrder, focus: Focus | null): Promise<Shown> {
   const charges = txns.filter((t) => t.kind === "charge");
   const credits = txns.filter((t) => t.kind === "credit");
   const refunds = txns.filter((t) => t.kind === "refund");
-  // A points or gift-card payment can cover several orders at once, and Amazon doesn't say how
-  // much went to which: this order took anywhere from none to all of it.
-  const sum = (xs: Txn[]) => xs.reduce((a, c) => a + c.amount, 0);
-  const own = sum(credits.filter((c) => c.orderIds.length <= 1));
-  const shared = sum(credits.filter((c) => c.orderIds.length > 1));
-  const credit: [number, number] = credits.length
-    ? [own, own + shared]
-    : [order.summary.credits, order.summary.credits];
+  const credit = creditRange(credits, order.summary.credits);
+  const shared = credit[1] - credit[0];
   const { solution, incomplete } = charges.length
     ? solve(order.shipments, charges, credit)
     : { solution: null, incomplete: false };

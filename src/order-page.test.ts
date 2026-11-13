@@ -14,6 +14,7 @@ import listRows from "../test/fixtures/amazon/transactions-list.rows.html?raw";
 import { loadPage } from "../test/html.ts";
 import { solve } from "./matcher.ts";
 import { parseOrder, priceItems } from "./order.ts";
+import { creditRange } from "./order-page.ts";
 import { fetchTransactions } from "./transactions.ts";
 import type { Txn } from "./types.ts";
 
@@ -23,8 +24,7 @@ afterEach(() => {
 
 /**
  * The order page's pipeline: parse, price, fetch the order's transactions (served from
- * `txnsHtml`), then solve. The credit range mirrors match() in order-page.ts, which isn't
- * exported: a points payment shared with other orders may have gone either way.
+ * `txnsHtml`), then solve, with the order page's own credit range.
  */
 async function matchOrder(orderHtml: string, txnsHtml: string) {
   const { order } = priceItems(parseOrder(loadPage(orderHtml)));
@@ -33,12 +33,7 @@ async function matchOrder(orderHtml: string, txnsHtml: string) {
   const txns = await fetchTransactions(order.orderId ?? "");
   const charges = txns.filter((t) => t.kind === "charge");
   const credits = txns.filter((t) => t.kind === "credit");
-  const sum = (xs: Txn[]) => xs.reduce((a, c) => a + c.amount, 0);
-  const own = sum(credits.filter((c) => c.orderIds.length <= 1));
-  const sharedCredit = sum(credits.filter((c) => c.orderIds.length > 1));
-  const credit: [number, number] = credits.length
-    ? [own, own + sharedCredit]
-    : [order.summary.credits, order.summary.credits];
+  const credit = creditRange(credits, order.summary.credits);
   const { solution, incomplete } = solve(order.shipments, charges, credit);
   /** Charge amount -> the deliveries (1-based, as the panel names them) it landed on. */
   const landed = Object.fromEntries(
@@ -88,5 +83,32 @@ describe("matching charges to deliveries on real orders", () => {
     const { landed, solution } = await matchOrder(refund, refundTxns);
     expect(landed).toEqual({ 8008: [1] });
     expect(solution?.absorbedBy).toEqual([0]);
+  });
+});
+
+describe("how much points or gift cards paid toward an order", () => {
+  const credit = (amount: number, orderIds: string[]): Txn => ({
+    method: "Amazon Gift Card",
+    date: "September 9, 2026",
+    status: "Completed",
+    el: null,
+    orderId: orderIds[0] ?? "",
+    orderIds,
+    amount,
+    kind: "credit",
+  });
+
+  test("a payment for this order alone is exactly its amount", () => {
+    expect(creditRange([credit(9512, ["114-3317431-5179528"])], 9512)).toEqual([9512, 9512]);
+  });
+
+  test("a payment shared with another order may be anywhere from none to all of it", () => {
+    const own = credit(1000, ["114-7767348-8987501"]);
+    const shared = credit(5216, ["114-7767348-8987501", "114-4442968-2608428"]);
+    expect(creditRange([own, shared], 2324)).toEqual([1000, 6216]);
+  });
+
+  test("without credit transactions, the Order Summary's figure", () => {
+    expect(creditRange([], 2640)).toEqual([2640, 2640]);
   });
 });
