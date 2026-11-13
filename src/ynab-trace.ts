@@ -166,17 +166,26 @@ function describeMatch(
     .join("");
   box.appendChild(el("table", null, rows));
   const nodes: HTMLElement[] = [box];
-  if (alt && alt.category_name !== x.category_name)
+  const cats = categoriesOf(x);
+  const altCats = alt ? categoriesOf(alt) : [];
+  // Two same-amount charges in different categories: either may be the order's, so neither
+  // category is given as the answer.
+  if (alt && altCats.join("\n") !== cats.join("\n")) {
     nodes.push(
       line(
         "acs-warn",
-        `There's also a ${fmt(c.amount)} charge on ${readableDates([alt.date])} in ${alt.category_name || "no category"}. If that's the one, use it instead.`,
+        `There's also a ${fmt(c.amount)} charge on ${readableDates([alt.date])} in ${altCats.join(", ") || "no category"}. If that's the one, use it instead.`,
       ),
     );
-  return {
-    nodes,
-    cats: lines.map((s) => realCategory(s.category_name)).filter(Boolean),
-  };
+    cats.push(...altCats);
+  }
+  return { nodes, cats };
+}
+
+/** A charge's categories: its own, or each split line's. */
+function categoriesOf(x: YnabTxn) {
+  const subs = (x.subtransactions || []).filter((s) => !s.deleted);
+  return (subs.length ? subs : [x]).map((s) => realCategory(s.category_name)).filter(Boolean);
 }
 
 function categorySummary(cats: string[], t: Trace) {
