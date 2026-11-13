@@ -24,6 +24,12 @@ export interface ParsedShipment {
 export interface Shipment extends Omit<ParsedShipment, "items"> {
   items: PricedItem[];
   total: number;
+  /**
+   * Discount (coupons, promotions) spread onto this delivery, tax-in. Amazon may have given
+   * all of it to another delivery (an item-specific coupon), so its charges can exceed
+   * `total` by up to this much.
+   */
+  discount?: number;
 }
 
 export interface Summary {

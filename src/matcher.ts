@@ -26,7 +26,7 @@ export function partitionsByLevel<T>(xs: readonly T[]): T[][][][] {
  */
 export function solve(
   // Only the totals and item counts matter here, so tests can pass plain objects.
-  shipments: readonly Pick<Shipment, "total" | "items">[],
+  shipments: readonly Pick<Shipment, "total" | "items" | "discount">[],
   charges: readonly Charge[],
   /**
    * Points/gift-card money paid toward the order: an amount, or a range when part of it was
@@ -59,6 +59,9 @@ export function solve(
           total: g.reduce((s, x) => s + x.s.total, 0),
           tol: 2 + g.reduce((s, x) => s + x.s.items.length, 0),
         },
+        // A delivery's charges may run over its estimate by the discount spread onto it, when
+        // Amazon really gave that discount to another delivery (an item-specific coupon).
+        discount: g.reduce((s, x) => s + (x.s.discount ?? 0), 0),
         sig: g.map((x) => x.s.total).join("+"),
         sum: 0,
         count: 0,
@@ -72,7 +75,9 @@ export function solve(
         let score = unmatched * 1000;
         let err = 0,
           absorbed = 0,
-          absorbing = 0;
+          absorbing = 0,
+          over = 0,
+          overrunning = 0;
         const absorbedBy = Array.from({ length: G.length }, () => 0);
         for (const w of slots) {
           if (w.count === 0) {
@@ -85,11 +90,18 @@ export function solve(
             absorbed += r;
             absorbedBy[w.gi] = r;
             absorbing++;
+          } else if (-r <= w.discount + w.group.tol) {
+            over -= r;
+            overrunning++;
           } else return;
         }
-        const aErr = absorbed < lo ? lo - absorbed : absorbed > hi ? absorbed - hi : 0;
-        if (aErr > 3 + 2 * absorbing) return;
-        score += err + aErr + absorbing * 0.5;
+        // A discount another delivery didn't get shows up as that much more absorbed here.
+        const net = absorbed - over;
+        const aErr = net < lo ? lo - net : net > hi ? net - hi : 0;
+        if (aErr > 3 + 2 * (absorbing + overrunning)) return;
+        // An item coupon makes every delivery without it run over, so overruns are weaker
+        // evidence against a match than credit spread over more deliveries.
+        score += err + aErr + absorbing * 0.5 + overrunning * 0.25;
         const sig = picked.map((w) => (w ? w.sig : "x")).join("|");
         const best = found.best;
         if (!best || score < best.score - 1e-9) {
@@ -116,7 +128,7 @@ export function solve(
         }
         const { j, amount: a } = next;
         for (const w of slots) {
-          if (w.sum + a > w.group.total + w.group.tol) continue;
+          if (w.sum + a > w.group.total + w.group.tol + w.discount) continue;
           w.sum += a;
           w.count++;
           picked[j] = w;

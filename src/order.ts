@@ -154,13 +154,23 @@ export function priceItems(order: ParsedOrder): {
   const adj = allocateBy(Math.round(s.preTaxAdj * scale), items, (i) => i.ext);
   const tax = allocateBy(Math.round(s.tax * scale), adj, ([i, a]) => i.ext + a);
   // Keep each priced item with the shipment it came from.
+  // Tax per pre-tax cent, to put a discount's share back with its tax.
+  const taxRate =
+    sumExt + s.preTaxAdj * scale > 0 ? (s.tax * scale) / (sumExt + s.preTaxAdj * scale) : 0;
   const priced = tax.map(([[i, a], t]) => ({
     from: i,
     item: { ...i, total: i.ext + a + t },
+    discount: a < 0 ? Math.round(-a * (1 + taxRate)) : 0,
   }));
   const shipments = order.shipments.map((sh): Shipment => {
-    const its = sh.items.flatMap((i) => priced.filter((p) => p.from === i).map((p) => p.item));
-    return { ...sh, items: its, total: its.reduce((a, i) => a + i.total, 0) };
+    const mine = sh.items.flatMap((i) => priced.filter((p) => p.from === i));
+    const its = mine.map((p) => p.item);
+    return {
+      ...sh,
+      items: its,
+      total: its.reduce((a, i) => a + i.total, 0),
+      discount: mine.reduce((a, p) => a + p.discount, 0),
+    };
   });
   const changed = unpriced > 0 || s.subtotal == null || s.grand == null;
   return { order: { ...order, shipments }, warnings, changed };

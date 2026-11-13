@@ -91,6 +91,29 @@ describe("matching charges to deliveries", () => {
     expect(landed(solution, 1)).toEqual([null]);
   });
 
+  describe("a coupon Amazon gave to one delivery only", () => {
+    // Estimates spread a $2.00 coupon over both deliveries ($1.00 each); Amazon gave it all
+    // to the second, so the first is charged $1.00 over its estimate and the second $1.00 under.
+    const withCoupon = [
+      { ...delivery(1000), discount: 100 },
+      { ...delivery(1900), discount: 100 },
+    ];
+
+    test("each charge still lands on its own delivery", () => {
+      const { solution } = solve(withCoupon, charges(1800, 1100), 0);
+      expect(landed(solution, 2)).toEqual([[1], [0]]);
+    });
+
+    test("a charge over its estimate by more than the coupon's share doesn't fit on its own", () => {
+      // $2.50 over, $2.50 under: only the two deliveries together account for it.
+      const { solution } = solve(withCoupon, charges(1650, 1250), 0);
+      expect(landed(solution, 2)).toEqual([
+        [0, 1],
+        [0, 1],
+      ]);
+    });
+  });
+
   describe("points and gift-card credit", () => {
     test("a known credit is absorbed by the delivery whose charge is short", () => {
       const { solution } = solve([delivery(3000), delivery(2000)], charges(2000, 2500), 500);
