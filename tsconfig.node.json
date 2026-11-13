@@ -1,8 +1,15 @@
 {
-  // vite.config.ts runs at build time (under Node, via Vite's own CLI), not in the browser.
-  "extends": ["@tsconfig/bun/tsconfig.json", "@tsconfig/strictest/tsconfig.json"],
+  // vite.config.ts runs at build time under Node, not in the browser.
+  "extends": "@tsconfig/strictest/tsconfig.json",
   "compilerOptions": {
-    "types": []
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "types": [],
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "verbatimModuleSyntax": true,
+    "noEmit": true
   },
   "include": ["vite.config.ts"]
 }
