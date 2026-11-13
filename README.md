@@ -17,13 +17,11 @@
   <a href="https://api.ynab.com"><img src="https://api.ynab.com/papi/works_with_ynab.svg" alt="Works with YNAB"></a>
 </p>
 
-Hover an Amazon transaction in YNAB and click the search icon. You land on the
-Amazon order that charge paid for, with the items it covered highlighted.
-
 ## What you get
 
-- **The order behind every charge.** No more scrolling your order history to
-  match amounts and dates.
+- **The order behind every charge.** Hover an Amazon transaction in YNAB and
+  click the search icon. You land on the Amazon order that charge paid for, with
+  the items it covered highlighted.
 - **Split-ready amounts.** When Amazon bills one order as several charges, it
   shows which charge paid for which items, tax and shipping included.
 - **Refunds in the right category.** It finds the charge a refund reverses and
@@ -34,29 +32,34 @@ Amazon order that charge paid for, with the items it covered highlighted.
 1. Install [Tampermonkey](https://www.tampermonkey.net) in your browser.
 2. Click **Install with Tampermonkey** at the top, then confirm.
 
-Updates arrive on their own.
+Tampermonkey checks this repository's releases for updates and installs them on
+its own.
 
 ## What it can access
 
-It runs only on amazon.com and app.ynab.com, inside tabs you're already signed
-in to. It never sees your passwords.
+It runs on Amazon's order and transaction pages and on app.ynab.com, inside tabs
+you're already signed in to. It never sees your passwords.
 
 - **It only reads.** It never buys, cancels, edits, or deletes anything on
   Amazon or in YNAB.
 - **It talks only to Amazon and YNAB.** There's no server behind it, no
   analytics, and no tracking.
-- **It remembers a little, on your computer.** Amazon transactions it has
-  already looked up (amounts, dates, order numbers) stay in Tampermonkey's
-  storage so it doesn't ask Amazon twice.
+- **It stores some data in Tampermonkey, on your computer.** It keeps the Amazon
+  transactions it has seen (amount, date, order number, and card name with its
+  last 4 digits) so it doesn't ask Amazon twice. It also keeps a log of when it
+  loaded data from Amazon, and passes a refund's order details to your YNAB tab
+  the same way. Saved transactions are cleared when you sign in to a different
+  Amazon account, or any time with **Forget saved Amazon transactions** in
+  Tampermonkey's menu.
 - **The YNAB token is optional.** Only refund categories need it. You create a
-  [personal access token](https://api.ynab.com/#personal-access-tokens) in
-  YNAB, and the script keeps it in Tampermonkey, sends it only to
-  `api.ynab.com`, and uses it only to read. Remove it any time from
+  [personal access token](https://api.ynab.com/#personal-access-tokens) in YNAB.
+  The script keeps it in Tampermonkey, sends it only to `api.ynab.com`, and uses
+  it only to read. Remove it any time with **Forget YNAB token** in
   Tampermonkey's menu.
 
 ## Check it yourself
 
-Don't take our word for any of this. The full source is in [`src/`](src), each
+Don't take my word for any of this. The full source is in [`src/`](src), each
 release is built from it by
 [GitHub Actions](.github/workflows/release-please.yml), and the installed file
 isn't minified, so you can read what runs. Tampermonkey shows you the whole
@@ -69,17 +72,15 @@ ask something like:
 > anywhere other than Amazon or YNAB, changes made to either account, or
 > anything sensitive it stores. Check that the README's claims match the code.
 
-If it finds a problem, please
-[open an issue](https://github.com/jacksonblankenship/ynab-amazon-tools/issues)
-or send a pull request.
-
 ## Good to know
 
-- Works with **amazon.com** (US) accounts.
+- Works with **amazon.com** (US) accounts, one Amazon account per browser.
 - Amazon limits how fast its pages load. The script keeps requests to a minimum,
   and if Amazon pushes back, it tells you how long to wait.
-- Amazon and YNAB change their pages without warning. If something breaks,
-  [open an issue](https://github.com/jacksonblankenship/ynab-amazon-tools/issues).
+- Amazon and YNAB change their pages without warning. If something breaks, or
+  you find a problem in the code,
+  [open an issue](https://github.com/jacksonblankenship/ynab-amazon-tools/issues)
+  or send a pull request.
 
 ## Disclaimer
 
@@ -92,8 +93,7 @@ We are not affiliated, associated, or in any way officially connected with YNAB
 or any of its subsidiaries or affiliates. The official YNAB website can be found
 at https://www.ynab.com. The names YNAB and You Need A Budget, as well as related
 names, tradenames, marks, trademarks, emblems, and images are registered
-trademarks of YNAB. Amazon is a trademark of Amazon.com, Inc. or its affiliates,
-which is also not connected with this project.
+trademarks of YNAB. Amazon is a trademark of Amazon.com, Inc. or its affiliates.
 
 ## License
 
