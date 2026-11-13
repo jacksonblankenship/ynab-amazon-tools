@@ -6,11 +6,13 @@ import { gm } from "../test/gm.ts";
 import { apiSearch, pageRows } from "./amazon-api.ts";
 import type { FindQuery, Txn } from "./types.ts";
 
-// Pacing between pages is a real wait in the browser; here it's instant.
-vi.mock("./lib/spa.ts", async (orig) => ({
-  ...(await orig<typeof import("./lib/spa.ts")>()),
-  sleep: () => Promise.resolve(),
-}));
+// Pacing between pages is a real wait in the browser; here it's instant, except where a test
+// turns it back on to check the pacing itself.
+const waits = vi.hoisted(() => ({ real: false }));
+vi.mock("./lib/spa.ts", async (orig) => {
+  const spa = await orig<typeof import("./lib/spa.ts")>();
+  return { ...spa, sleep: (ms: number) => (waits.real ? spa.sleep(ms) : Promise.resolve()) };
+});
 
 const UNUSABLE_KEY = "acs-api-unusable-v2";
 
@@ -168,11 +170,16 @@ describe("reading the rows the page arrived with", () => {
 
 type Reply = { status: number; body?: unknown; redirected?: boolean } | "network-error";
 
-/** Stand in for fetch, answering each request with the next reply. Returns the request bodies. */
+/**
+ * Stand in for fetch, answering each request with the next reply. Returns the request bodies
+ * and when each was sent.
+ */
 function serve(...replies: Reply[]) {
   const bodies: Record<string, unknown>[] = [];
+  const sentAt: number[] = [];
   const fetch = vi.fn(async (_url: string, init: RequestInit) => {
     bodies.push(JSON.parse(String(init.body)));
+    sentAt.push(Date.now());
     const r = replies.shift();
     if (!r) throw new Error("unexpected extra request");
     if (r === "network-error") throw new TypeError("Failed to fetch");
@@ -182,7 +189,7 @@ function serve(...replies: Reply[]) {
     return res;
   });
   vi.stubGlobal("fetch", fetch);
-  return { fetch, bodies };
+  return { fetch, bodies, sentAt };
 }
 
 /** A page of the service's answer. */
@@ -413,6 +420,35 @@ describe("searching Amazon's transaction service", () => {
         checked: 0,
       });
       expect(gm.get(UNUSABLE_KEY)).toBeUndefined();
+    });
+  });
+
+  describe("pacing", () => {
+    beforeEach(() => {
+      waits.real = true;
+      vi.useFakeTimers();
+      // The shortest pause the jitter allows.
+      vi.spyOn(Math, "random").mockReturnValue(0);
+    });
+    afterEach(() => {
+      waits.real = false;
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    });
+
+    test("asks for each page no sooner than 1.5 seconds after the last", async () => {
+      const { sentAt } = serve(
+        answer([txn({ amount: "-$9.99" })], "page-2-key"),
+        answer([txn({ amount: "-$8.88" })], "page-3-key"),
+        answer([txn({ amount: "-$34.19" })]),
+      );
+      const search = apiSearch(query("charge"), lookFor(3419), never());
+      await vi.runAllTimersAsync();
+      expect(await search).toMatchObject({ hits: [{ amount: 3419 }] });
+      expect(sentAt).toHaveLength(3);
+      const gaps = sentAt.slice(1).map((t, i) => t - (sentAt[i] ?? 0));
+      expect(gaps).toEqual([expect.any(Number), expect.any(Number)]);
+      for (const gap of gaps) expect(gap).toBeGreaterThanOrEqual(1500);
     });
   });
 
