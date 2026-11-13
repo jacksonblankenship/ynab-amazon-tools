@@ -42,17 +42,18 @@ export const searchIcon = (size: number) =>
 export const reducedMotion = () =>
   typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const FONT = "https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap";
+/**
+ * On YNAB the suite's text uses YNAB's own font, taken from the page. Elsewhere the CSS
+ * names only system fonts: loading a web font would send the visit to a third party.
+ */
+const ynabFont = (prefix: string) =>
+  `.${prefix}-yn-tip, #${prefix}-overlay, .${prefix}-result { font-family: inherit; }`;
 
-/** Inject the suite stylesheet under `prefix`, and the Figtree font off YNAB (which has its own). */
+/** Inject the suite stylesheet under `prefix`. It loads nothing from any other host. */
 export function suiteStyle(prefix: string) {
   const root = document.head || document.documentElement;
   const style = document.createElement("style");
   style.textContent = css.replace(/pfx-/g, `${prefix}-`);
+  if (location.hostname === "app.ynab.com") style.textContent += `\n${ynabFont(prefix)}\n`;
   root.appendChild(style);
-  if (location.hostname === "app.ynab.com") return;
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = FONT;
-  root.appendChild(link);
 }

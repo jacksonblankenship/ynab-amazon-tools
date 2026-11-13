@@ -15,6 +15,6 @@ export default defineConfig({
     environmentOptions: { jsdom: { url: "https://www.amazon.com/" } },
     setupFiles: ["test/setup.ts"],
     // The script's own styles as text, so tests can check them; other CSS stays empty.
-    css: { include: [/style\.css/] },
+    css: { include: [/(style|suite)\.css/] },
   },
 });
