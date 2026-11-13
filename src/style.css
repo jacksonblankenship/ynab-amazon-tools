@@ -238,3 +238,11 @@
   outline: 2px solid #191818;
   outline-offset: 2px;
 }
+/* A saved answer shown in YNAB: the way to look at it on Amazon anyway. */
+.acs-result .acs-open {
+  display: block;
+  width: fit-content;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}

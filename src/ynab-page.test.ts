@@ -4,7 +4,8 @@
 import { describe, expect, test } from "vitest";
 import { loadPage } from "../test/html.ts";
 import registerRows from "../test/fixtures/ynab/register-rows.html?raw";
-import { rowFor } from "./answers.ts";
+import { gm } from "../test/gm.ts";
+import { rowFor, saveAnswer } from "./answers.ts";
 import { ynabPage } from "./ynab-page.ts";
 import { planFor } from "./ynab-lookup.ts";
 
@@ -194,5 +195,131 @@ describe("opening a line on Amazon", () => {
     openRegister();
     hover(rowWith("2026-09-11", "$236.52"));
     expect(rowFor(23652, "charge", "September 10, 2026")).toBeUndefined();
+  });
+});
+
+describe("a line already worked out on Amazon", () => {
+  const CHARGE_ROW = { amount: 23652, kind: "charge" as const, date: "2026-09-11" };
+  /** Hover the line and click its button, as the user would; returns whether it opened Amazon. */
+  function click(date: string, money: string) {
+    const r = rowWith(date, money);
+    hover(r);
+    return button().dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  }
+  const panel = () => document.querySelector(".acs-result");
+  const idOf = (date: string, money: string) =>
+    rowWith(date, money).getAttribute("data-row-id") ?? "";
+
+  test("shows what it paid for in YNAB, with amounts, instead of opening Amazon", () => {
+    openRegister();
+    saveAnswer(
+      { ...CHARGE_ROW, id: idOf("2026-09-11", "$236.52") },
+      {
+        orderId: "114-7767348-8987501",
+        items: [
+          { title: "Cordless Drill", amount: 20000, qty: 1 },
+          { title: "Drill Bits", amount: 3652, qty: 2 },
+        ],
+        exact: true,
+        cautions: ["Part of this order was paid with points shared with another order."],
+      },
+    );
+    expect(click("2026-09-11", "$236.52")).toBe(false);
+    const text = panel()?.textContent ?? "";
+    expect(text).toMatch(/Cordless Drill.*\$200\.00/);
+    expect(text).toMatch(/Drill Bits.*×2.*\$36\.52/);
+    expect(text).toMatch(/\$236\.52/);
+    expect(text).toMatch(/114-7767348-8987501/);
+    expect(text).toMatch(/shared with another order/);
+    // Nothing asked of Amazon.
+    expect(gm.requests()).toHaveLength(0);
+  });
+
+  test("says when the amounts are each item's estimated share", () => {
+    openRegister();
+    saveAnswer(
+      { ...CHARGE_ROW, id: idOf("2026-09-11", "$236.52") },
+      {
+        orderId: "114-7767348-8987501",
+        items: [
+          { title: "Cordless Drill", amount: 20000, qty: 1 },
+          { title: "Drill Bits", amount: 3652, qty: 1 },
+        ],
+        exact: false,
+        cautions: [],
+      },
+    );
+    click("2026-09-11", "$236.52");
+    expect(panel()?.textContent).toMatch(/each item's share/);
+  });
+
+  test("a refund shows the category it goes back to, and what it was probably for", () => {
+    openRegister();
+    saveAnswer(
+      { amount: 6864, kind: "refund", date: "2026-09-11", id: idOf("2026-09-11", "$68.64") },
+      {
+        orderId: "114-0271446-2821572",
+        items: [{ title: "Packable Rain Jacket", amount: 6864, qty: 1 }],
+        exact: false,
+        category: { names: [{ name: "Fun Money", amount: 8008 }], confident: true },
+        cautions: [],
+      },
+    );
+    expect(click("2026-09-11", "$68.64")).toBe(false);
+    const put = document.querySelector(".acs-put")?.textContent ?? "";
+    expect(put).toContain("$68.64");
+    expect(put).toContain("Fun Money");
+    expect(panel()?.textContent).toMatch(/Rain Jacket/);
+  });
+
+  test("a refund's guess between categories names each", () => {
+    openRegister();
+    saveAnswer(
+      { amount: 6864, kind: "refund", date: "2026-09-11", id: idOf("2026-09-11", "$68.64") },
+      {
+        orderId: "114-0271446-2821572",
+        items: [],
+        exact: false,
+        category: {
+          names: [
+            { name: "Fun Money", amount: 8008 },
+            { name: "Kids: School", amount: 8008 },
+          ],
+          confident: false,
+        },
+        cautions: ["YNAB has another $80.08 Amazon charge near this date, in Kids: School."],
+      },
+    );
+    click("2026-09-11", "$68.64");
+    const put = document.querySelector(".acs-put")?.textContent ?? "";
+    expect(put).toMatch(/Fun Money/);
+    expect(put).toMatch(/Kids: School/);
+    expect(put).not.toMatch(/^Put/);
+    expect(panel()?.textContent).toMatch(/another \$80\.08/);
+  });
+
+  test('"Open on Amazon" still opens the line there, and leaves it for the Amazon tab', () => {
+    openRegister();
+    const id = idOf("2026-09-11", "$236.52");
+    saveAnswer({ ...CHARGE_ROW, id }, { orderId: "1", items: [], exact: true, cautions: [] });
+    click("2026-09-11", "$236.52");
+    const open = [...(panel()?.querySelectorAll("a") ?? [])].find((a) =>
+      /Open on Amazon/.test(a.textContent ?? ""),
+    );
+    if (!open) throw new Error("no Open on Amazon link");
+    expect(open.href).toBe(button().href);
+    expect(open.target).toBe("_blank");
+    open.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    expect(rowFor(23652, "charge", "September 10, 2026")?.id).toBe(id);
+  });
+
+  test("another line of the same amount isn't answered by it", () => {
+    openRegister();
+    saveAnswer(
+      { ...CHARGE_ROW, id: "someone-else" },
+      { orderId: "1", items: [], exact: true, cautions: [] },
+    );
+    expect(click("2026-09-11", "$236.52")).toBe(true);
+    expect(panel()).toBeNull();
   });
 });

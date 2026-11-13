@@ -21,6 +21,8 @@ import type {
 } from "./types.ts";
 
 const CHANGED = "Amazon may have changed this page.";
+export const ESTIMATED =
+  "Amazon doesn't say which items each charge covered, so these amounts are each item's share.";
 
 export const short = (t: string) =>
   t.length > 70 ? `${t.slice(0, 70).replace(/\s+\S*$/, "")}…` : t;
@@ -82,19 +84,32 @@ const amountButton = (c: number) =>
 
 /** The amounts each item came to; `head`, if any, says which charge they're for. */
 function splitTable(split: Split, head: string | null) {
+  return amountsTable(
+    split.lines.map((l) => ({ title: l.item.title, qty: l.item.qty, amount: l.amount })),
+    split.charge.amount,
+    head,
+  );
+}
+
+/** Items with the amounts they came to, each copyable, and the total they make. */
+export function amountsTable(
+  items: { title: string; qty: number; amount: number }[],
+  total: number,
+  head: string | null = null,
+) {
   const box = el("div", "acs-split");
   if (head) box.appendChild(el("div", null, head));
-  const rows = split.lines
+  const rows = items
     .map(
       (l) =>
-        `<tr><td>${esc(short(l.item.title))}${l.item.qty > 1 ? ` <span class="acs-muted">×${l.item.qty}</span>` : ""}</td><td class="acs-r">${amountButton(l.amount)}</td></tr>`,
+        `<tr><td>${esc(short(l.title))}${l.qty > 1 ? ` <span class="acs-muted">×${l.qty}</span>` : ""}</td><td class="acs-r">${amountButton(l.amount)}</td></tr>`,
     )
     .join("");
   box.appendChild(
     el(
       "table",
       null,
-      `${rows}<tr class="acs-tot"><td>Total</td><td class="acs-r">${amountButton(split.charge.amount)}</td></tr>`,
+      `${rows}<tr class="acs-tot"><td>Total</td><td class="acs-r">${amountButton(total)}</td></tr>`,
     ),
   );
   $$<HTMLButtonElement>("button.acs-copy", box).forEach((b) => {
@@ -362,13 +377,7 @@ export function renderFocus(
     body.push(memo);
   }
   if (absorbed > 0) body.push(line("acs-muted", paidLess(solution, gi)));
-  if (!split.exact)
-    body.push(
-      line(
-        "acs-warn",
-        "Amazon doesn't say which items each charge covered, so these amounts are each item's share.",
-      ),
-    );
+  if (!split.exact) body.push(line("acs-warn", ESTIMATED));
   for (const w of warnings) body.push(el("div", "acs-warn", esc(w)));
   if (changed) body.push(reportLine(suite, "acs-warn", CHANGED));
 
