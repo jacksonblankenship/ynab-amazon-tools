@@ -358,6 +358,8 @@ a.pfx-report {
 .pfx-result {
   box-sizing: border-box;
   margin: 0 0 14px;
+  /* The panel is always light; a dark host page (YNAB's dark theme) would give its controls dark defaults. */
+  color-scheme: light;
   background: #fff;
   border: 1px solid #ece7da;
   border-radius: 14px;

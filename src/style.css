@@ -76,7 +76,8 @@
   margin: 4px 0 0;
   padding-left: 18px;
 }
-.acs-panel a {
+.acs-panel a,
+.acs-result a {
   /* biome-ignore lint/complexity/noImportantStyles: has to beat the host page's own link styles */
   color: #475afa !important;
 }
@@ -114,6 +115,9 @@
   padding: 6px 8px;
   border: 1px solid #dbd7cc;
   border-radius: 8px;
+  /* YNAB's dark theme styles inputs dark; the panel stays light. */
+  background: #fff;
+  color: #191818;
   font: inherit;
 }
 .acs-token button {
