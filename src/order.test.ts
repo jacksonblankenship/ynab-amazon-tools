@@ -164,3 +164,46 @@ describe("when Amazon changes the order page", () => {
     expect(priceItems(parsed).changed).toBe(true);
   });
 });
+
+describe("spreading tax over items", () => {
+  test("each item gets tax in proportion to its price", () => {
+    // $31.96 of tax over a $387.80 subtotal, worked by hand: 2× $39.96 takes $6.59, $27.96
+    // takes $2.30, $39.96 takes $3.29 and $239.96 takes $19.78 (shares rounded to the cent,
+    // the leftover cent to the largest remainder).
+    const { shipments } = read(shared).order;
+    expect(shipments.map((s) => s.items.map((i) => i.total))).toEqual([
+      [8651, 3026, 4325],
+      [25974],
+    ]);
+  });
+});
+
+describe("when the page doesn't show every item the summary counts", () => {
+  test("scales tax to the items shown, so a hidden delivery doesn't load its tax onto the rest", () => {
+    // As if delivery 2 were cancelled and left off the page: the summary still counts it.
+    const doc = loadPage(shared);
+    doc.querySelectorAll('[data-component="purchasedItems"]')[1]?.remove();
+    const { order, warnings } = priceItems(parseOrder(doc));
+    // Delivery 1's estimate is what it was with both deliveries shown.
+    expect(order.shipments.map((s) => s.total)).toEqual([16002]);
+    expect(warnings.join(" ")).toMatch(/\$147\.84.*\$387\.80/);
+  });
+});
+
+describe("refund lines in the Order Summary", () => {
+  test("a refund line above the Grand Total isn't read as a fee", () => {
+    // A layout with the refund above the Grand Total and no "Total before tax" row, so
+    // shipping and fees are read line by line.
+    const doc = loadPage(refund);
+    const rows = [...doc.querySelectorAll('[data-component="chargeSummary"] li')];
+    const label = (li: Element) => li.textContent.replace(/\s+/g, " ").trim();
+    const refundRow = rows.find((li) => label(li).startsWith("Refund Total"));
+    const grandRow = rows.find((li) => label(li).startsWith("Grand Total"));
+    if (!refundRow || !grandRow) throw new Error("fixture summary changed");
+    grandRow.before(refundRow);
+    rows.find((li) => label(li).startsWith("Total before tax"))?.remove();
+    const { order } = priceItems(parseOrder(doc));
+    expect(order.summary).toMatchObject({ preTaxAdj: 0, grand: 8008 });
+    expect(order.shipments.map((s) => s.total)).toEqual([8008]);
+  });
+});
