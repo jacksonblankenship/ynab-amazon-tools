@@ -23,6 +23,30 @@
   color: #6d5600;
   font-size: 13px;
 }
+.acs-answer {
+  font-size: 15px;
+  font-weight: 700;
+}
+/* The items under the answer line belong to it: no rule between them. */
+.acs-result .acs-answer + .acs-split {
+  margin-top: 2px;
+  padding-top: 0;
+  border-top: 0;
+}
+.acs-how {
+  margin-top: 10px;
+  color: #51504d;
+  font-size: 13px;
+}
+.acs-how summary {
+  width: fit-content;
+  color: #475afa;
+  font-weight: 600;
+  cursor: pointer;
+}
+.acs-how > div {
+  margin-top: 4px;
+}
 .acs-split {
   margin-top: 8px;
   padding-top: 8px;

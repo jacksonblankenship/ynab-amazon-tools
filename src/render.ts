@@ -1,7 +1,7 @@
 // Order page UI, floating over Amazon's page rather than written into it: the single-charge
 // view, and the whole order's breakdown. Amazon's own deliveries are only outlined from above.
 import { nearest } from "./dates.ts";
-import { $$, el, esc } from "./lib/dom.ts";
+import { $$, el, esc, line } from "./lib/dom.ts";
 import { must } from "./lib/errors.ts";
 import { type Highlight, highlight } from "./lib/highlight.ts";
 import { fmt } from "./lib/money.ts";
@@ -36,15 +36,10 @@ export const card = (box: Element) => {
   return c && $$('[data-component="shipmentStatus"]', c).length === 1 ? c : box;
 };
 
-function splitTable(split: Split, multi: boolean) {
+/** The amounts each item came to; `head`, if any, says which charge they're for. */
+function splitTable(split: Split, head: string | null) {
   const box = el("div", "acs-split");
-  const head = el(
-    "div",
-    null,
-    `${multi ? `<b>${fmt(split.charge.amount)}</b> charge` : "Items"}` +
-      `${split.exact ? "" : ' <span class="acs-muted">(Amazon didn\'t say which items, so each item gets its share of this charge)</span>'}`,
-  );
-  box.appendChild(head);
+  if (head) box.appendChild(el("div", null, head));
   const rows = split.lines
     .map(
       (l) =>
@@ -59,6 +54,33 @@ function splitTable(split: Split, multi: boolean) {
     ),
   );
   return box;
+}
+
+/** The breakdown's header for a split: the charge it's for, and whether it's an estimate. */
+const splitHead = (split: Split, multi: boolean) =>
+  `${multi ? `<b>${fmt(split.charge.amount)}</b> charge` : "Items"}` +
+  `${split.exact ? "" : ' <span class="acs-muted">(Amazon didn\'t say which items, so each item gets its share of this charge)</span>'}`;
+
+/** One line on what made the card pay less than the items' price, for under the amounts. */
+function paidLess(solution: Solution, gi: number): string {
+  const absorbed = must(solution.absorbedBy[gi], `credit for group ${gi}`);
+  const coupon = solution.couponBy ? (solution.couponBy[gi] ?? 0) : null;
+  const from =
+    coupon == null
+      ? "points, a gift card or a coupon"
+      : coupon === absorbed
+        ? "a coupon"
+        : coupon
+          ? "points or a gift card, and a coupon"
+          : "points or a gift card";
+  return `Amounts are after ${fmt(absorbed)} from ${from}.`;
+}
+
+/** Supporting detail, closed until asked for: what the answer above rests on. */
+function howItMatched(nodes: Node[]) {
+  const d = el("details", "acs-how");
+  d.append(el("summary", null, "How it matched"), ...nodes);
+  return d;
 }
 
 /** Shows a panel over the page, and outlines `boxes` once it has `landed`. */
@@ -167,7 +189,7 @@ export function renderOrder(order: Order, result: RenderResult, lead: Node[] = [
         ),
       );
     for (const s of splitGroup(items, groupCharges, absorbed))
-      nodes.push(splitTable(s, groupCharges.length > 1));
+      nodes.push(splitTable(s, splitHead(s, groupCharges.length > 1)));
     const boxes = g.members.map((x) => must(shipments[x], `delivery ${x + 1}`).box);
     sections.push({ first: Math.min(...g.members), node: section(boxes, dn(g.members), nodes) });
   });
@@ -181,7 +203,7 @@ export function renderOrder(order: Order, result: RenderResult, lead: Node[] = [
       ),
     ];
     for (const split of splitGroup(sh.items, [{ amount: sh.total }], 0))
-      nodes.push(splitTable(split, false));
+      nodes.push(splitTable(split, splitHead(split, false)));
     sections.push({ first: i, node: section([sh.box], dn([i]), nodes) });
   });
   if (solution?.ambiguous)
@@ -259,22 +281,48 @@ export function renderFocus(
   if (!split) return null;
   const boxes = g.members.map((x) => must(order.shipments[x], `delivery ${x + 1}`).box);
   const dn = g.members.map((x) => `Delivery ${x + 1}`).join(" + ");
+  const these = g.members.length > 1 ? "these deliveries" : "this delivery";
 
+  // The answer first: the items this charge paid for, with amounts to split by.
+  const [only, ...more] = split.lines;
+  const one = only && !more.length ? only : null;
+  const answer =
+    groupCharges.length > 1
+      ? `This ${fmt(c.amount)} is 1 of ${groupCharges.length} charges for ${g.members.length > 1 ? `${g.members.length} deliveries billed together` : "one delivery"}. It paid for${one ? "" : ":"}`
+      : one
+        ? ""
+        : `This paid for ${split.lines.length} items:`;
   const body: Node[] = [];
-  if (groupCharges.length > 1) {
+  if (answer) body.push(line("acs-answer", answer));
+  if (one)
     body.push(
-      el(
-        "div",
-        "acs-muted",
-        `Amazon billed this delivery in ${groupCharges.length} charges (${groupCharges.map((x) => fmt(x.amount)).join(" + ")}). This is the ${fmt(c.amount)} one.`,
+      line("acs-answer", `${short(one.item.title)}${one.item.qty > 1 ? ` ×${one.item.qty}` : ""}`),
+    );
+  else body.push(splitTable(split, null));
+  if (absorbed > 0) body.push(line("acs-muted", paidLess(solution, gi)));
+  if (!split.exact)
+    body.push(
+      line(
+        "acs-warn",
+        "Amazon doesn't say which items each charge covered, so these amounts are each item's share.",
       ),
     );
-  }
-  if (absorbed > 0) {
-    body.push(el("div", "acs-muted", `On this delivery, ${shortBy(solution, gi)}.`));
-  }
-  body.push(splitTable(split, false));
   for (const w of warnings) body.push(el("div", "acs-warn", esc(w)));
   if (changed) body.push(reportLine(suite, "acs-warn", CHANGED));
-  return floating({ amount: fmt(c.amount), meta: `${c.date} · ${c.method} · ${dn}`, body }, boxes);
+
+  // How it got there, for when the answer looks wrong.
+  const how: Node[] = [
+    line(null, `${c.method}, charged ${c.date || "on an unknown date"} · ${dn}`),
+  ];
+  if (groupCharges.length > 1)
+    how.push(
+      el(
+        "div",
+        null,
+        `Amazon billed ${these} in ${groupCharges.length} charges: ${groupCharges.map(chargeLabel).join(", ")}. This is the ${fmt(c.amount)} one.`,
+      ),
+    );
+  if (absorbed > 0) how.push(line(null, `On ${these}, ${shortBy(solution, gi)}.`));
+  body.push(howItMatched(how));
+  return floating({ amount: fmt(c.amount), meta: focus.date || c.date, body }, boxes);
 }
