@@ -13,10 +13,6 @@
   <a href="https://github.com/jacksonblankenship/ynab-amazon-tools/releases/latest/download/amazon-charge-finder.user.js"><img src="https://img.shields.io/badge/Install-Tampermonkey-00485b?style=for-the-badge&logo=tampermonkey&logoColor=white" alt="Install with Tampermonkey"></a>
 </p>
 
-<p align="center">
-  <a href="https://api.ynab.com"><img src="https://api.ynab.com/papi/works_with_ynab.svg" alt="Works with YNAB"></a>
-</p>
-
 ## What you get
 
 - **The order behind every charge.** Hover an Amazon transaction in YNAB and
