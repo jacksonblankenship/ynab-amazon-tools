@@ -110,7 +110,7 @@ async function settle(rows: Element[], abort: AbortSignal): Promise<Loaded> {
 }
 
 const MAX_PAGES = 25;
-const THROTTLED = "Amazon may be limiting requests. Wait a few minutes and try again.";
+const THROTTLED = "Amazon may be limiting requests. Wait half an hour and try again.";
 // Asking again soon after a refusal can extend it, so hold off this long.
 const COOLDOWN_MS = 30 * 60e3;
 
