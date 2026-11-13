@@ -253,4 +253,26 @@ describe("a damaged saved value", () => {
     remember([txn()]);
     expect(cached()).toHaveLength(1);
   });
+
+  test("a damaged row is skipped, and the rest still answer", () => {
+    gm.seed(CACHE_KEY, {
+      rows: [null, { amount: "x" }, { ...txn(), el: undefined }],
+      covered: { all: [], refunds: [] },
+    });
+    expect(cached()).toHaveLength(1);
+    remember([txn({ amount: 8 })]);
+    expect(cached()).toHaveLength(2);
+  });
+
+  test("coverage missing a list reads as none seen on it", () => {
+    gm.seed(CACHE_KEY, {
+      rows: [],
+      covered: { all: [[day("Oct 01, 2026"), day("Nov 01, 2026")]] },
+    });
+    expect(isCovered(["all", "refunds"], day("Oct 10, 2026"), day("Oct 12, 2026"), null)).toBe(
+      true,
+    );
+    rememberSweep("refunds", [day("Oct 01, 2026"), day("Nov 01, 2026")]);
+    expect(isCovered(["refunds"], day("Oct 10, 2026"), day("Oct 12, 2026"), null)).toBe(true);
+  });
 });

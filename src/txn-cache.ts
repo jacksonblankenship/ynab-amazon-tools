@@ -37,12 +37,36 @@ const empty = (): Cache => ({ rows: [], covered: { all: [], refunds: [] } });
 const account = () =>
   document.querySelector("[data-hashed-id]")?.getAttribute("data-hashed-id") || undefined;
 
+// A damaged row or list (hand-edited storage, say) is dropped, not left to break every search.
+const isRow = (r: unknown): r is Stored => {
+  const t = r as Partial<Stored> | null;
+  return (
+    typeof t === "object" &&
+    t !== null &&
+    Array.isArray(t.orderIds) &&
+    typeof t.amount === "number" &&
+    typeof t.date === "string" &&
+    typeof t.method === "string"
+  );
+};
+const spans = (v: unknown): Span[] =>
+  Array.isArray(v)
+    ? v.filter(
+        (s): s is Span => Array.isArray(s) && typeof s[0] === "number" && typeof s[1] === "number",
+      )
+    : [];
+
 function read(): Cache {
   try {
     const v: unknown = GM_getValue(CACHE_KEY, null);
     if (!v || typeof v !== "object") return empty();
     const c: Partial<Cache> = v;
-    return Array.isArray(c.rows) && c.covered ? { ...empty(), ...c } : empty();
+    if (!Array.isArray(c.rows) || !c.covered) return empty();
+    return {
+      ...(typeof c.account === "string" ? { account: c.account } : {}),
+      rows: c.rows.filter(isRow),
+      covered: { all: spans(c.covered.all), refunds: spans(c.covered.refunds) },
+    };
   } catch {
     return empty();
   }
