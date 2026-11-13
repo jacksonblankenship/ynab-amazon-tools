@@ -81,12 +81,14 @@ const ynabDay = (iso: string) => Math.round(Date.parse(`${iso}T00:00:00Z`) / DAY
 function findCharges(txns: YnabTxn[], c: Trace["charges"][number]) {
   const day = toDay(c.date);
   const amazonish = (x: YnabTxn) => (/amazon|amzn/i.test(x.payee_name || "") ? 0 : 1);
-  // A transfer (say, a payment to an Amazon card) is never the order's charge.
+  // A transfer (say, a payment to an Amazon card) is never the order's charge. Once an
+  // Amazon charge matches, another store's charge of the same amount is a coincidence.
   return txns
     .filter((x) => !x.deleted && !x.transfer_account_id && x.amount === -c.amount * 10)
     .map((x) => ({ x, d: day == null ? 0 : ynabDay(x.date) - day }))
     .filter((m) => m.d >= -3 && m.d <= 7)
     .sort((a, b) => amazonish(a.x) - amazonish(b.x) || Math.abs(a.d) - Math.abs(b.d))
+    .filter((m, _, [best]) => !best || amazonish(m.x) === amazonish(best.x))
     .map((m) => m.x);
 }
 
