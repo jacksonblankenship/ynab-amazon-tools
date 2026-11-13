@@ -221,9 +221,8 @@ export function refundAnswer(
   const [one] = all;
   if (!one) return { warn: "None of these charges are categorized in YNAB yet." };
   if (all.length === 1) return { put: `Put ${fmt(amount)} back in ${one}.` };
-  return {
-    put: `This order was in: ${all.join(", ")}. The ${fmt(amount)} belongs in one (or more) of these.`,
-  };
+  // Said once, in the answer: which of these is for the user to tell.
+  return { put: `Probably ${all.slice(0, -1).join(", ")} or ${all.at(-1)}.` };
 }
 
 // The user's other plans that could hold these charges, newest first: a plan that began after

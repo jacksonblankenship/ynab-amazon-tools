@@ -169,3 +169,14 @@
   outline: 2px solid #191818;
   outline-offset: 2px;
 }
+.acs-how {
+  margin-top: 10px;
+  font-size: 13px;
+}
+.acs-how summary {
+  color: #51504d;
+  cursor: pointer;
+}
+.acs-how[open] summary {
+  margin-bottom: 4px;
+}

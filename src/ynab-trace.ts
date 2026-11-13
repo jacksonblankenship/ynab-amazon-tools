@@ -8,7 +8,7 @@ import { fmt } from "./lib/money.ts";
 import { resultPanel } from "./lib/result-panel.ts";
 import { reportLine } from "./lib/suite.ts";
 import { suite } from "./overlay.ts";
-import { refundHint, TRACE_KEY } from "./refund.ts";
+import { howItMatched, refundHint, TRACE_KEY } from "./refund.ts";
 import { short } from "./render.ts";
 import type { RefundLookup, Trace } from "./types.ts";
 import { lookUpRefund, planIn, refundAnswer, TOKEN_KEY } from "./ynab-lookup.ts";
@@ -35,13 +35,7 @@ function isTrace(v: unknown): v is Trace {
 // One original charge as a small table: its category, or each split line, with a link
 // to its account. A split line matching the refund is emphasized.
 function describeMatch({ charge: c, found: x }: RefundLookup["charges"][number]): HTMLElement[] {
-  if (!x)
-    return [
-      line(
-        "acs-warn",
-        `No ${fmt(c.amount)} Amazon charge in YNAB within a week of ${c.date || "the Amazon date"}. It may be in another plan, or entered with a different amount.`,
-      ),
-    ];
+  if (!x) return [];
   const box = el("div", "acs-split");
   // Absolute, so the link works whichever tab made the lookup.
   const account =
@@ -62,37 +56,48 @@ function describeMatch({ charge: c, found: x }: RefundLookup["charges"][number])
     )
     .join("");
   box.appendChild(el("table", null, rows));
-  const nodes: HTMLElement[] = [box];
-  if (x.alt)
-    nodes.push(
-      line(
-        "acs-warn",
-        `There's also a ${fmt(c.amount)} charge on ${readableDates([x.alt.date])} in ${x.alt.categories.join(", ") || "no category"}. If that's the one, use it instead.`,
-      ),
-    );
-  return nodes;
+  return [box];
 }
 
-function lookupNodes(l: RefundLookup, t: Trace): HTMLElement[] {
-  const answer = refundAnswer(l, t.refund.amount);
+/** What can't be left behind "How it matched": a charge not found, or found twice. */
+function cautions({ charge: c, found: x }: RefundLookup["charges"][number]): HTMLElement[] {
+  if (!x)
+    return [
+      line(
+        "acs-warn",
+        `No ${fmt(c.amount)} Amazon charge in YNAB within a week of ${c.date || "the Amazon date"}. It may be in another plan, or entered with a different amount.`,
+      ),
+    ];
+  if (!x.alt) return [];
   return [
     line(
-      "acs-muted",
-      `The original order's ${l.charges.length > 1 ? `${l.charges.length} charges` : "charge"} in YNAB:`,
+      "acs-warn",
+      `There's also a ${fmt(c.amount)} charge on ${readableDates([x.alt.date])} in ${x.alt.categories.join(", ") || "no category"}. If that's the one, use it instead.`,
     ),
-    ...l.charges.flatMap(describeMatch),
-    ...(l.limited
-      ? [
-          line(
-            "acs-warn",
-            "YNAB is limiting requests, so other plans weren't checked. Try again later.",
-          ),
-        ]
-      : []),
-    // With no charge found, "not categorized yet" would be wrong; the warning above says why.
-    ...(answer
-      ? ["put" in answer ? line("acs-put", answer.put) : line("acs-warn", answer.warn)]
-      : []),
+  ];
+}
+
+/** The answer, then (after the refunded items) its cautions and how it was matched. */
+function lookupNodes(l: RefundLookup, t: Trace): [Node[], Node[]] {
+  const answer = refundAnswer(l, t.refund.amount);
+  const lead =
+    // With no charge found, "not categorized yet" would be wrong; the cautions say why.
+    answer ? ["put" in answer ? line("acs-put", answer.put) : line("acs-warn", answer.warn)] : [];
+  const how = l.charges.flatMap(describeMatch);
+  return [
+    lead,
+    [
+      ...l.charges.flatMap(cautions),
+      ...(l.limited
+        ? [
+            line(
+              "acs-warn",
+              "YNAB is limiting requests, so other plans weren't checked. Try again later.",
+            ),
+          ]
+        : []),
+      ...(how.length ? [howItMatched(how)] : []),
+    ],
   ];
 }
 
@@ -127,26 +132,28 @@ function tokenForm(done: () => void): HTMLElement[] {
 }
 
 async function fillTrace(body: HTMLElement, t: Trace): Promise<void> {
-  const say = (...nodes: Node[]) => body.replaceChildren(...refundHint(t), ...nodes);
+  // The answer (or what stands in for it) first, then the refunded items, then the rest.
+  const say = (lead: Node[], rest: Node[] = []) =>
+    body.replaceChildren(...lead, ...refundHint(t), ...rest);
   if (!t.charges.length)
-    return say(
+    return say([
       line(
         "acs-warn",
         "Amazon didn't show a card charge for this order, so there's nothing to trace.",
       ),
-    );
+    ]);
   // The Amazon tab already asked YNAB: show its answer rather than ask again.
   if (t.lookup) return say(...lookupNodes(t.lookup, t));
   const token = GM_getValue(TOKEN_KEY, "");
-  if (!token) return say(...tokenForm(() => fillTrace(body, t)));
-  say(line("acs-muted", "Looking up the original charge in YNAB…"));
+  if (!token) return say(tokenForm(() => fillTrace(body, t)));
+  say([line("acs-muted", "Looking up the original charge in YNAB…")]);
   const res = await lookUpRefund(t, planIn(location.pathname), token);
   if ("lookup" in res) return say(...lookupNodes(res.lookup, t));
   if (res.badToken) {
     GM_setValue(TOKEN_KEY, "");
-    return say(line("acs-warn", res.error), ...tokenForm(() => fillTrace(body, t)));
+    return say([line("acs-warn", res.error), ...tokenForm(() => fillTrace(body, t))]);
   }
-  say(res.report ? reportLine(suite, "acs-warn", res.error) : line("acs-warn", res.error));
+  say([res.report ? reportLine(suite, "acs-warn", res.error) : line("acs-warn", res.error)]);
 }
 
 function showTrace(t: Trace) {

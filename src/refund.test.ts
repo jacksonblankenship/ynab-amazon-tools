@@ -51,6 +51,22 @@ describe("tracing a refund", () => {
     expect(panel.textContent).not.toMatch(/Rain Jacket/);
   });
 
+  test("the order's charges and the refund's card sit behind \"How it matched\"", async () => {
+    const { order, charges, refund } = refundedOrder();
+    const t = traceRefund(order, charges, refund);
+    const panel = refundPanel(t);
+    await answerRefund(panel, t, undefined);
+    const how = panel.querySelector("details");
+    expect(how?.open).toBe(false);
+    expect(how?.querySelector("summary")?.textContent).toBe("How it matched");
+    expect(how?.textContent).toMatch(/\$80\.08 on August 20, 2026/);
+    expect(how?.textContent).toMatch(/Rewards Visa \*\*\*\*0257/);
+    // Outside it: only the answer's pointer, no charges or card.
+    const outside = panel.cloneNode(true) as HTMLElement;
+    outside.querySelector("details")?.remove();
+    expect(outside.textContent).not.toMatch(/\$80\.08|0257/);
+  });
+
   test("with no card charge, the panel says there's nothing to trace", () => {
     const { order, refund } = refundedOrder();
     const panel = refundPanel(traceRefund(order, [] as Txn[], refund));

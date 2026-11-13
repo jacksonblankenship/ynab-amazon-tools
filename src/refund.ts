@@ -90,24 +90,36 @@ export function refundHint(t: Trace): HTMLElement[] {
   return only && !more.length ? [line("acs-muted", `Probably for: ${itemNames(only)}`)] : [];
 }
 
+/** What an answer rests on, collapsed: users only need it when the answer looks wrong. */
+export function howItMatched(nodes: Node[]) {
+  const how = el("details", "acs-how");
+  how.append(el("summary", null, "How it matched"), ...nodes);
+  return how;
+}
+
 /** The refund's panel, floating over the order page. answerRefund fills in its answer. */
 export function refundPanel(t: Trace) {
-  const body: Node[] = [el("div", "acs-answer"), ...refundHint(t)];
-  if (t.charges.length)
-    body.push(
-      line(
-        "acs-muted",
-        `This order's card charges: ${t.charges.map((c) => `${fmt(c.amount)} on ${c.date || "an unknown date"}`).join(", ")}.`,
-      ),
-      el("div", "acs-ynab"),
-    );
-  else
-    body.push(
-      line(
-        "acs-warn",
-        "Amazon didn't show a card charge for this order, so there's no original charge to trace.",
-      ),
-    );
+  const body: Node[] = t.charges.length
+    ? [
+        el("div", "acs-answer"),
+        ...refundHint(t),
+        el("div", "acs-caution"),
+        howItMatched([
+          line(
+            "acs-muted",
+            `This order's card charges: ${t.charges.map((c) => `${fmt(c.amount)} on ${c.date || "an unknown date"}`).join(", ")}.`,
+          ),
+          ...(t.refund.method ? [line("acs-muted", `Refunded to ${t.refund.method}.`)] : []),
+          el("div", "acs-ynab"),
+        ]),
+      ]
+    : [
+        line(
+          "acs-warn",
+          "Amazon didn't show a card charge for this order, so there's no original charge to trace.",
+        ),
+        ...refundHint(t),
+      ];
   $$(".acs-result").forEach((e) => {
     e.remove();
   });
@@ -115,7 +127,7 @@ export function refundPanel(t: Trace) {
     floating: true,
     label: "This refund",
     amount: fmt(t.refund.amount),
-    meta: [t.refund.date, t.refund.method].filter(Boolean).join(" · "),
+    meta: t.refund.date,
     body,
   });
   document.body.appendChild(panel);
@@ -150,6 +162,7 @@ export async function answerRefund(panel: HTMLElement, t: Trace, plan: string | 
     return handOver();
   }
   say(...amazonAnswer(res.lookup, t));
+  $(".acs-caution", panel)?.replaceChildren(...cautions(res.lookup));
   $(".acs-ynab", panel)?.replaceChildren(...amazonDetail(res.lookup));
   handOver(res.lookup);
 }
@@ -168,11 +181,27 @@ function amazonAnswer(l: RefundLookup, t: Trace): HTMLElement[] {
   );
 }
 
+/** What makes the answer less sure, shown with it. */
+function cautions(l: RefundLookup): HTMLElement[] {
+  const nodes = l.charges.flatMap(({ charge: c, found: x }) =>
+    x?.alt
+      ? [
+          line(
+            "acs-warn",
+            `YNAB has another ${fmt(c.amount)} Amazon charge near this date, in ${x.alt.categories.join(", ") || "no category"}. Either may be this order's.`,
+          ),
+        ]
+      : [],
+  );
+  if (l.limited)
+    nodes.push(line("acs-warn", "YNAB is limiting requests, so other plans weren't checked."));
+  return nodes;
+}
+
 /** What the answer rests on: each found charge's categories and amounts. */
 function amazonDetail(l: RefundLookup): HTMLElement[] {
-  const nodes: HTMLElement[] = [];
-  for (const { charge: c, found: x } of l.charges) {
-    if (!x) continue;
+  return l.charges.flatMap(({ charge: c, found: x }) => {
+    if (!x) return [];
     const box = el("div", "acs-split");
     box.appendChild(el("div", null, `<b>${fmt(c.amount)}</b> in YNAB${x.split ? ", split" : ""}`));
     const rows = x.lines
@@ -182,16 +211,6 @@ function amazonDetail(l: RefundLookup): HTMLElement[] {
       )
       .join("");
     box.appendChild(el("table", null, rows));
-    nodes.push(box);
-    if (x.alt)
-      nodes.push(
-        line(
-          "acs-warn",
-          `YNAB has another ${fmt(c.amount)} Amazon charge near this date, in ${x.alt.categories.join(", ") || "no category"}. Either may be this order's.`,
-        ),
-      );
-  }
-  if (l.limited)
-    nodes.push(line("acs-warn", "YNAB is limiting requests, so other plans weren't checked."));
-  return nodes;
+    return [box];
+  });
 }

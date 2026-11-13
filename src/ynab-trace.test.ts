@@ -373,6 +373,26 @@ describe("handing the trace from the Amazon tab to the YNAB tab", () => {
   });
 });
 
+describe("what the YNAB panel opens on", () => {
+  test('the answer first; the original charge\'s account and lines behind "How it matched"', async () => {
+    openYnab(() => ok(planTxns(byId(AUG_21, { memo: "gift for Sam" }))));
+    await handOver({
+      ...refundTrace(),
+      itemSets: [[{ title: "Packable Rain Jacket", units: 1, amount: 6864 }]],
+    });
+    const body = panel()?.querySelector(".acs-r-body");
+    const text = body?.textContent ?? "";
+    expect(text.indexOf(advice())).toBe(0);
+    expect(text.indexOf("Rain Jacket")).toBeGreaterThan(0);
+    const how = body?.querySelector("details");
+    expect(how?.open).toBe(false);
+    expect(how?.querySelector("summary")?.textContent).toBe("How it matched");
+    expect(how?.textContent).toMatch(/Store Rewards Card/);
+    expect(how?.textContent).toMatch(/gift for Sam/);
+    expect(body?.textContent).not.toMatch(/Switch back/);
+  });
+});
+
 // ---- The Amazon tab asks YNAB itself ----
 
 /** The Amazon order page answering a refund, with YNAB's API answering with `respond`. */
@@ -399,6 +419,9 @@ describe("the refund's category on the Amazon page", () => {
     expectPutBack("🐷 Fun Money A");
     const text = p.textContent ?? "";
     expect(text.indexOf("Fun Money A")).toBeLessThan(text.indexOf("Rain Jacket"));
+    // The split table and charges are behind "How it matched".
+    expect(p.querySelector("details .acs-split")).not.toBeNull();
+    expect(p.querySelector("details")?.open).toBe(false);
     expect(gm.requests()).toEqual([
       {
         method: "GET",
