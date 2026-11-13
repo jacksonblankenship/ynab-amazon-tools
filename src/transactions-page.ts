@@ -195,7 +195,7 @@ export async function transactionsPage() {
     stop(
       `No ${fmt(query.amount)} ${kindName} found`,
       dates.length
-        ? `${why} Amazon usually posts a charge a day before YNAB does, so this looked within two weeks of ${readableDates(dates)}.`
+        ? `${why} ${kindName === "charge" ? "Amazon usually posts a charge a day before YNAB does, so this" : "This"} looked within two weeks of ${readableDates(dates)}.`
         : why,
       true,
     );
