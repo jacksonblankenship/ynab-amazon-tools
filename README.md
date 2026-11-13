@@ -1,12 +1,24 @@
-# Amazon Charge Finder for YNAB
+<p align="center">
+  <img src="assets/icon.svg" width="96" height="96" alt="">
+</p>
 
-Your YNAB register says _Amazon, Amazon, Amazon_. This tells you what each one
-was.
+<h1 align="center">Amazon Charge Finder for YNAB</h1>
+
+<p align="center">
+  Your YNAB register says <em>Amazon, Amazon, Amazon</em>. This tells you what
+  each one was.
+</p>
+
+<p align="center">
+  <a href="https://github.com/jacksonblankenship/ynab-amazon-tools/releases/latest/download/amazon-charge-finder.user.js"><img src="https://img.shields.io/badge/Install-Tampermonkey-00485b?style=for-the-badge&logo=tampermonkey&logoColor=white" alt="Install with Tampermonkey"></a>
+</p>
+
+<p align="center">
+  <a href="https://api.ynab.com"><img src="https://api.ynab.com/papi/works_with_ynab.svg" alt="Works with YNAB"></a>
+</p>
 
 Hover an Amazon transaction in YNAB and click the search icon. You land on the
 Amazon order that charge paid for, with the items it covered highlighted.
-
-[![Install with Tampermonkey](https://img.shields.io/badge/Install-Tampermonkey-00485b?style=for-the-badge&logo=tampermonkey&logoColor=white)](https://github.com/jacksonblankenship/ynab-amazon-tools/releases/latest/download/amazon-charge-finder.user.js)
 
 ## What you get
 
@@ -20,7 +32,7 @@ Amazon order that charge paid for, with the items it covered highlighted.
 ## Install
 
 1. Install [Tampermonkey](https://www.tampermonkey.net) in your browser.
-2. Click **Install with Tampermonkey** above, then confirm.
+2. Click **Install with Tampermonkey** at the top, then confirm.
 
 Updates arrive on their own.
 
@@ -65,9 +77,23 @@ or send a pull request.
 
 - Works with **amazon.com** (US) accounts.
 - Amazon limits how fast its pages load. The script keeps requests to a minimum,
-  and if Amazon pushes back, it tells you to wait a few minutes.
+  and if Amazon pushes back, it tells you how long to wait.
 - Amazon and YNAB change their pages without warning. If something breaks,
   [open an issue](https://github.com/jacksonblankenship/ynab-amazon-tools/issues).
+
+## Disclaimer
+
+This is a personal open-source project. I built it for my own YNAB routine and
+share it in case it helps you too. It isn't reviewed, endorsed, or supported by
+YNAB or Amazon. Use it at your own risk: it comes as is, with no warranty (see
+the [license](LICENSE)).
+
+We are not affiliated, associated, or in any way officially connected with YNAB
+or any of its subsidiaries or affiliates. The official YNAB website can be found
+at https://www.ynab.com. The names YNAB and You Need A Budget, as well as related
+names, tradenames, marks, trademarks, emblems, and images are registered
+trademarks of YNAB. Amazon is a trademark of Amazon.com, Inc. or its affiliates,
+which is also not connected with this project.
 
 ## License
 
