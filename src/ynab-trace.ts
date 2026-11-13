@@ -8,10 +8,10 @@ import { fmt } from "./lib/money.ts";
 import { resultPanel } from "./lib/result-panel.ts";
 import { reportLine } from "./lib/suite.ts";
 import { suite } from "./overlay.ts";
-import { notInYnab, refundHint, saveRefund, TRACE_KEY } from "./refund.ts";
+import { answerLines, notInYnab, refundHint, saveRefund, TRACE_KEY } from "./refund.ts";
 import { howItMatched, short } from "./render.ts";
 import type { LookupError, RefundLookup, Trace } from "./types.ts";
-import { lookUpRefund, planIn, refundAnswer, TOKEN_KEY } from "./ynab-lookup.ts";
+import { lookUpRefund, planIn, TOKEN_KEY } from "./ynab-lookup.ts";
 
 /** A trace older than this is from an earlier refund lookup; don't show it. */
 const TRACE_MS = 6e5;
@@ -78,10 +78,8 @@ function cautions({ charge: c, found: x }: RefundLookup["charges"][number]): HTM
 
 /** The answer, then (after the refunded items) its cautions and how it was matched. */
 function lookupNodes(l: RefundLookup, t: Trace): [Node[], Node[]] {
-  const answer = refundAnswer(l, t.refund.amount);
-  const lead =
-    // With no charge found, "not categorized yet" would be wrong; the cautions say why.
-    answer ? ["put" in answer ? line("acs-put", answer.put) : line("acs-warn", answer.warn)] : [];
+  // With no charge found, "not categorized yet" would be wrong; the cautions say why.
+  const lead = answerLines(l, t.refund.amount);
   const how = l.charges.flatMap(describeMatch);
   return [
     lead,

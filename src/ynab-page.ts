@@ -6,7 +6,7 @@ import { fmt } from "./lib/money.ts";
 import { resultPanel } from "./lib/result-panel.ts";
 import { type YnabCharge, ynabButton } from "./lib/ynab.ts";
 import { suite } from "./overlay.ts";
-import { itemNames } from "./refund.ts";
+import { itemNames, putLine } from "./refund.ts";
 import { amountsTable, ESTIMATED, howItMatched, short } from "./render.ts";
 import type { SavedAnswer } from "./types.ts";
 import { AMAZON_PAYEE, categorySentence, planIn, rememberPlan } from "./ynab-lookup.ts";
@@ -81,13 +81,13 @@ function refundBody(a: SavedAnswer): Node[] {
   const answer = el("div", "acs-answer");
   if (cat)
     answer.appendChild(
-      line(
-        "acs-put",
+      putLine(
         categorySentence(
           cat.names.map((n) => n.name),
           cat.confident,
           a.amount,
         ),
+        cat.confident,
       ),
     );
   const what = a.items.map((x) => ({ title: x.title, units: x.qty, amount: x.amount }));

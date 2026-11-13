@@ -129,6 +129,7 @@ describe("the refund's original charge and category", () => {
     expect(advice()).toMatch(/🐷 Fun Money A/);
     expect(advice()).toMatch(/Kids: School/);
     expect(panelText()).toMatch(/also a \$80\.08 charge on August 23, 2026 in Kids: School/);
+    expect(document.querySelector(".acs-put")?.classList).toContain("acs-hedge");
   });
 
   test("the same holds when the nearer charge is the one in the other category", async () => {
@@ -475,6 +476,26 @@ describe("the refund's category on the Amazon page", () => {
     };
     await answerOnAmazon(() => ok(planTxns(byId(AUG_21, split)).filter((t) => t.id !== AUG_23)));
     expect(advice()).toBe("Put $68.64 back in Baby.");
+  });
+
+  test("a sure answer and a hedged one look different", async () => {
+    await answerOnAmazon(() => ok(planTxns()));
+    expect(document.querySelector(".acs-put")?.classList).not.toContain("acs-hedge");
+    document.body.innerHTML = "";
+    await answerOnAmazon(() => ok(planTxns(byId(AUG_23, { category_name: "Kids: School" }))));
+    const put = document.querySelector(".acs-put");
+    expect(put?.textContent).toMatch(/^Probably/);
+    expect(put?.classList).toContain("acs-hedge");
+  });
+
+  test("with two same-amount charges, the competing one is shown in How it matched", async () => {
+    const p = await answerOnAmazon(() =>
+      ok(planTxns(byId(AUG_23, { category_name: "Kids: School" }))),
+    );
+    const how = p.querySelector("details")?.textContent ?? "";
+    expect(how).toMatch(/🐷 Fun Money A/);
+    expect(how).toMatch(/another \$80\.08 charge on August 23, 2026/i);
+    expect(how).toMatch(/Kids: School/);
   });
 
   test("with one of the order's charges not in YNAB, it says so and claims no category", async () => {

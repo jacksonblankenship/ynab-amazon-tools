@@ -3,6 +3,7 @@
 // to the YNAB tab (ynab-trace.ts), which shows the same answer.
 import { GM_getValue, GM_setValue } from "$";
 import { saveAnswer } from "./answers.ts";
+import { readableDates } from "./dates.ts";
 import { $, $$, el, esc, line } from "./lib/dom.ts";
 import { errMsg, must } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
@@ -164,7 +165,7 @@ export async function answerRefund(panel: HTMLElement, t: Trace, plan: string | 
   }));
   if ("lookup" in res) {
     saveRefund(t, res.lookup);
-    say(...amazonAnswer(res.lookup, t));
+    say(...answerLines(res.lookup, t.refund.amount));
     $(".acs-caution", panel)?.replaceChildren(...cautions(res.lookup));
     $(".acs-ynab", panel)?.replaceChildren(...amazonDetail(res.lookup));
   } else
@@ -174,13 +175,19 @@ export async function answerRefund(panel: HTMLElement, t: Trace, plan: string | 
   handOver(res);
 }
 
-// Amazon's page can read the panel, so only categories and amounts from YNAB go on it: no
-// memos, payees, accounts or plan names.
-function amazonAnswer(l: RefundLookup, t: Trace): HTMLElement[] {
-  const answer = refundAnswer(l, t.refund.amount);
-  // With no charge found, the cautions say why.
+/** The answer line. A guess ("Probably …") is drawn quieter than a sure answer. */
+export const putLine = (text: string, sure: boolean) =>
+  line(sure ? "acs-put" : "acs-put acs-hedge", text);
+
+/**
+ * The answer, or the warning standing in for it; none when no charge was found (the cautions
+ * say why). Amazon's page can read the panel, so only categories and amounts from YNAB go on
+ * it: no memos, payees, accounts or plan names.
+ */
+export function answerLines(l: RefundLookup, amount: number): HTMLElement[] {
+  const answer = refundAnswer(l, amount);
   if (!answer) return [];
-  return ["put" in answer ? line("acs-put", answer.put) : line("acs-warn", answer.warn)];
+  return ["put" in answer ? putLine(answer.put, answer.sure) : line("acs-warn", answer.warn)];
 }
 
 const notInYnabText = (c: Trace["charges"][number]) =>
@@ -233,12 +240,18 @@ export function saveRefund(t: Trace, l: RefundLookup) {
   if (t.row && body) saveAnswer(t.row, body);
 }
 
-/** What the answer rests on: each found charge's categories and amounts. */
+/**
+ * What the answer rests on: each found charge's categories and amounts, and the other
+ * same-amount charge when there's one it could as well be.
+ */
 function amazonDetail(l: RefundLookup): HTMLElement[] {
   return l.charges.flatMap(({ charge: c, found: x }) => {
     if (!x) return [];
     const box = el("div", "acs-split");
-    box.appendChild(el("div", null, `<b>${fmt(c.amount)}</b> in YNAB${x.split ? ", split" : ""}`));
+    const on = x.alt ? ` on ${esc(readableDates([x.date]))}` : "";
+    box.appendChild(
+      el("div", null, `<b>${fmt(c.amount)}</b> in YNAB${on}${x.split ? ", split" : ""}`),
+    );
     const rows = x.lines
       .map(
         (s) =>
@@ -246,6 +259,20 @@ function amazonDetail(l: RefundLookup): HTMLElement[] {
       )
       .join("");
     box.appendChild(el("table", null, rows));
-    return [box];
+    if (!x.alt) return [box];
+    // Its categories, but not how much went to each: the lookup keeps only the names.
+    const alt = el("div", "acs-split");
+    alt.appendChild(
+      el(
+        "div",
+        null,
+        `Another <b>${fmt(c.amount)}</b> charge on ${esc(readableDates([x.alt.date]))} in YNAB`,
+      ),
+    );
+    const altRows = (x.alt.categories.length ? x.alt.categories : ["Uncategorized"])
+      .map((name) => `<tr><td>${esc(name)}</td></tr>`)
+      .join("");
+    alt.appendChild(el("table", null, altRows));
+    return [box, alt];
   });
 }

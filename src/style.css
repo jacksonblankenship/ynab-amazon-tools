@@ -152,6 +152,14 @@
   background: #f0f0ff;
   font-weight: 600;
 }
+/* A guess between categories ("Probably …"): outlined, not filled, and not bold, so it
+   doesn't read as sure as "Put $X back in …". */
+.acs-result .acs-put.acs-hedge {
+  padding: 7px 11px;
+  border: 1px dashed #c7c9ff;
+  background: none;
+  font-weight: 400;
+}
 .acs-token {
   display: flex;
   gap: 8px;

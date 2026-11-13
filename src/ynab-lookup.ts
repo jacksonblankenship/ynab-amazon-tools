@@ -288,7 +288,7 @@ export function categorySentence(names: string[], confident: boolean, amount: nu
 export function refundAnswer(
   l: RefundLookup,
   amount: number,
-): { put: string } | { warn: string } | null {
+): { put: string; sure: boolean } | { warn: string } | null {
   const c = refundCategories(l);
   if (!c) return null;
   if (c === "uncategorized") return { warn: "None of these charges are categorized in YNAB yet." };
@@ -298,6 +298,7 @@ export function refundAnswer(
       c.confident,
       amount,
     ),
+    sure: c.confident,
   };
 }
 
