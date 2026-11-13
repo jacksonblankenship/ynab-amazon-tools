@@ -34,6 +34,7 @@ interface YnabTxn extends YnabSub {
   payee_name?: string | null;
   account_id?: string;
   account_name?: string;
+  transfer_account_id?: string | null;
   subtransactions?: YnabSub[];
 }
 
@@ -80,8 +81,9 @@ const ynabDay = (iso: string) => Math.round(Date.parse(`${iso}T00:00:00Z`) / DAY
 function findCharges(txns: YnabTxn[], c: Trace["charges"][number]) {
   const day = toDay(c.date);
   const amazonish = (x: YnabTxn) => (/amazon|amzn/i.test(x.payee_name || "") ? 0 : 1);
+  // A transfer (say, a payment to an Amazon card) is never the order's charge.
   return txns
-    .filter((x) => !x.deleted && x.amount === -c.amount * 10)
+    .filter((x) => !x.deleted && !x.transfer_account_id && x.amount === -c.amount * 10)
     .map((x) => ({ x, d: day == null ? 0 : ynabDay(x.date) - day }))
     .filter((m) => m.d >= -3 && m.d <= 7)
     .sort((a, b) => amazonish(a.x) - amazonish(b.x) || Math.abs(a.d) - Math.abs(b.d))
