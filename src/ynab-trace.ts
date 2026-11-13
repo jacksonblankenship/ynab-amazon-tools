@@ -8,7 +8,7 @@ import { fmt } from "./lib/money.ts";
 import { resultPanel } from "./lib/result-panel.ts";
 import { reportLine } from "./lib/suite.ts";
 import { suite } from "./overlay.ts";
-import { notInYnab, refundHint, TRACE_KEY } from "./refund.ts";
+import { notInYnab, refundHint, saveRefund, TRACE_KEY } from "./refund.ts";
 import { howItMatched, short } from "./render.ts";
 import type { LookupError, RefundLookup, Trace } from "./types.ts";
 import { lookUpRefund, planIn, refundAnswer, TOKEN_KEY } from "./ynab-lookup.ts";
@@ -157,7 +157,11 @@ async function fillTrace(body: HTMLElement, t: Trace): Promise<void> {
   if (!token) return say(tokenForm(() => fillTrace(body, t)));
   say([line("acs-muted", "Looking up the original charge in YNAB…")]);
   const res = await lookUpRefund(t, planIn(location.pathname), token);
-  if ("lookup" in res) return say(...lookupNodes(res.lookup, t));
+  if ("lookup" in res) {
+    // This tab asked YNAB, not the Amazon tab: keep the answer here.
+    saveRefund(t, res.lookup);
+    return say(...lookupNodes(res.lookup, t));
+  }
   failed(res);
 }
 

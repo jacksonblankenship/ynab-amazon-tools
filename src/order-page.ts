@@ -1,4 +1,5 @@
 // Order details page: parse, fetch the order's charges, match them, and show the result.
+import { rowFor, saveAnswer } from "./answers.ts";
 import { nearest } from "./dates.ts";
 import { $, el, line } from "./lib/dom.ts";
 import { errMsg, PageChanged } from "./lib/errors.ts";
@@ -45,8 +46,14 @@ export async function orderPage() {
     launcher(parsed);
     return;
   }
-  // Only now, so a cancelled lookup doesn't reach the YNAB tab.
-  if (shown.trace) void answerRefund(shown.panel, shown.trace, focus.plan);
+  // Only now, so a cancelled lookup doesn't reach the YNAB tab, or save an answer.
+  if (focus.row && shown.answer) saveAnswer(focus.row, shown.answer);
+  if (shown.trace)
+    void answerRefund(
+      shown.panel,
+      focus.row ? { ...shown.trace, row: focus.row } : shown.trace,
+      focus.plan,
+    );
   const cards = shown.boxes.map(card);
   const top = Math.min(...cards.map((c) => c.getBoundingClientRect().top));
   if (Number.isFinite(top)) window.scrollTo({ top: window.scrollY + top - 16 });
@@ -183,12 +190,16 @@ function launcher(parsed: ParsedOrder, panel?: HTMLElement) {
 /**
  * Order page opened from YNAB:
  * #acs-charge=1999&acs-on=January%205%2C%202026[&acs-kind=refund]
- * A refund's YNAB plan comes from Tampermonkey's storage, never the address.
+ * A refund's YNAB plan, and the YNAB line it was opened from, come from Tampermonkey's
+ * storage, never the address.
  */
 export function focusTarget(): Focus | null {
   const h = new URLSearchParams(location.hash.slice(1));
   const amount = Number(h.get("acs-charge"));
   const kind = h.get("acs-kind") === "refund" ? "refund" : "charge";
-  const plan = kind === "refund" && amount ? planFor(amount) : undefined;
-  return amount ? { amount, date: h.get("acs-on") || "", kind, ...(plan ? { plan } : {}) } : null;
+  if (!amount) return null;
+  const date = h.get("acs-on") || "";
+  const plan = kind === "refund" ? planFor(amount) : undefined;
+  const row = rowFor(amount, kind, date);
+  return { amount, date, kind, ...(plan ? { plan } : {}), ...(row ? { row } : {}) };
 }

@@ -2,14 +2,21 @@
 // for them → their categories in YNAB (ynab-lookup.ts). The trace, with what YNAB said, goes
 // to the YNAB tab (ynab-trace.ts), which shows the same answer.
 import { GM_getValue, GM_setValue } from "$";
+import { saveAnswer } from "./answers.ts";
 import { $, $$, el, esc, line } from "./lib/dom.ts";
 import { errMsg, must } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
 import { resultPanel } from "./lib/result-panel.ts";
 import { suite } from "./overlay.ts";
 import { howItMatched, short } from "./render.ts";
-import type { Order, PricedItem, RefundLookup, Trace, Txn } from "./types.ts";
-import { type LookupResult, lookUpRefund, refundAnswer, TOKEN_KEY } from "./ynab-lookup.ts";
+import type { AnswerBody, Order, PricedItem, RefundLookup, Trace, Txn } from "./types.ts";
+import {
+  type LookupResult,
+  lookUpRefund,
+  refundAnswer,
+  refundCategories,
+  TOKEN_KEY,
+} from "./ynab-lookup.ts";
 
 /** Where the Amazon tab leaves a trace for the YNAB tab, in Tampermonkey's storage. */
 export const TRACE_KEY = "acs-trace";
@@ -156,6 +163,7 @@ export async function answerRefund(panel: HTMLElement, t: Trace, plan: string | 
     error: errMsg(e),
   }));
   if ("lookup" in res) {
+    saveRefund(t, res.lookup);
     say(...amazonAnswer(res.lookup, t));
     $(".acs-caution", panel)?.replaceChildren(...cautions(res.lookup));
     $(".acs-ynab", panel)?.replaceChildren(...amazonDetail(res.lookup));
@@ -175,30 +183,54 @@ function amazonAnswer(l: RefundLookup, t: Trace): HTMLElement[] {
   return ["put" in answer ? line("acs-put", answer.put) : line("acs-warn", answer.warn)];
 }
 
-/** A charge of the order's that YNAB doesn't have: shown in either tab, never left behind. */
-export const notInYnab = (c: Trace["charges"][number]) =>
-  line(
-    "acs-warn",
-    `No ${fmt(c.amount)} Amazon charge in YNAB within a week of ${c.date || "the Amazon date"}. It may be in another plan, or entered with a different amount.`,
-  );
+const notInYnabText = (c: Trace["charges"][number]) =>
+  `No ${fmt(c.amount)} Amazon charge in YNAB within a week of ${c.date || "the Amazon date"}. It may be in another plan, or entered with a different amount.`;
 
-/** What makes the answer less sure, shown with it. */
-function cautions(l: RefundLookup): HTMLElement[] {
-  const nodes = l.charges.flatMap(({ charge: c, found: x }) =>
+/** A charge of the order's that YNAB doesn't have: shown in either tab, never left behind. */
+export const notInYnab = (c: Trace["charges"][number]) => line("acs-warn", notInYnabText(c));
+
+/** What makes the answer less sure, shown with it, and saved with it. */
+function cautionTexts(l: RefundLookup): string[] {
+  const texts = l.charges.flatMap(({ charge: c, found: x }) =>
     !x
-      ? [notInYnab(c)]
+      ? [notInYnabText(c)]
       : x.alt
         ? [
-            line(
-              "acs-warn",
-              `YNAB has another ${fmt(c.amount)} Amazon charge near this date, in ${x.alt.categories.join(", ") || "no category"}. Either may be this order's.`,
-            ),
+            `YNAB has another ${fmt(c.amount)} Amazon charge near this date, in ${x.alt.categories.join(", ") || "no category"}. Either may be this order's.`,
           ]
         : [],
   );
-  if (l.limited)
-    nodes.push(line("acs-warn", "YNAB is limiting requests, so other plans weren't checked."));
-  return nodes;
+  if (l.limited) texts.push("YNAB is limiting requests, so other plans weren't checked.");
+  return texts;
+}
+const cautions = (l: RefundLookup) => cautionTexts(l).map((t) => line("acs-warn", t));
+
+/**
+ * The refund's answer, to keep for the YNAB line it was opened from: the category (or the
+ * categories it may be), and the items when only one set of them adds up to it. Null when
+ * there's no category to give.
+ */
+export function refundRecord(t: Trace, l: RefundLookup): AnswerBody | null {
+  const c = refundCategories(l);
+  if (!c || c === "uncategorized" || !t.orderId) return null;
+  const [only, ...more] = t.itemSets;
+  return {
+    orderId: t.orderId,
+    items:
+      only && !more.length
+        ? only.map((x) => ({ title: x.title, amount: x.amount, qty: x.units }))
+        : [],
+    // Amazon doesn't say which items a refund was for.
+    exact: false,
+    category: c,
+    cautions: cautionTexts(l),
+  };
+}
+
+/** Keep the refund's answer under the YNAB line it was opened from, if it has one. */
+export function saveRefund(t: Trace, l: RefundLookup) {
+  const body = t.row && refundRecord(t, l);
+  if (t.row && body) saveAnswer(t.row, body);
 }
 
 /** What the answer rests on: each found charge's categories and amounts. */

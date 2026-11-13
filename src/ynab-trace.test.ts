@@ -9,6 +9,7 @@ import orderHtml from "../test/fixtures/amazon/order-refund.html?raw";
 import transactionsHtml from "../test/fixtures/amazon/order-refund.transactions.html?raw";
 import plansJson from "../test/fixtures/ynab/api/plans.json?raw";
 import planTxnsJson from "../test/fixtures/ynab/api/plan-transactions.json?raw";
+import { savedAnswer } from "./answers.ts";
 import { parseOrder, priceItems } from "./order.ts";
 import { answerRefund, refundPanel, TRACE_KEY, traceRefund } from "./refund.ts";
 import { parseTransactions } from "./transactions.ts";
@@ -568,5 +569,89 @@ describe("the refund's category on the Amazon page", () => {
     expect(panel()?.querySelector("a")?.getAttribute("href")).toMatch(
       new RegExp(`^https://app\\.ynab\\.com/${PLAN}/accounts/`),
     );
+  });
+});
+
+// ---- Saving the answer, so the YNAB line needn't be looked up on Amazon again ----
+
+describe("saving a refund's answer", () => {
+  const row = { amount: 6864, kind: "refund" as const, date: "2026-09-11", id: "c42d3571" };
+  const saved = () =>
+    savedAnswer({ amount: 6864, kind: "refund", dates: ["2026-09-11"], id: "c42d3571" });
+
+  test("the Amazon tab saves the category it found, with the YNAB line it's for", async () => {
+    const trace = {
+      ...refundTrace(),
+      itemSets: [[{ title: "Packable Rain Jacket", units: 1, amount: 6864 }]],
+      row,
+    };
+    await answerOnAmazon(() => ok(planTxns()), { trace });
+    expect(saved()).toMatchObject({
+      kind: "refund",
+      amount: 6864,
+      orderId: "114-0271446-2821572",
+      items: [{ title: "Packable Rain Jacket", amount: 6864, qty: 1 }],
+      exact: false,
+      // Both $80.08 charges were in this category: $80.08 of it went there.
+      category: { names: [{ name: "🐷 Fun Money A", amount: 8008 }], confident: true },
+      cautions: [],
+    });
+  });
+
+  test("a guess between categories is saved as one, with its caution", async () => {
+    await answerOnAmazon(() => ok(planTxns(byId(AUG_23, { category_name: "Kids: School" }))), {
+      trace: { ...refundTrace(), row },
+    });
+    const a = saved();
+    expect(a?.category?.confident).toBe(false);
+    expect(a?.category?.names.map((n) => n.name).sort()).toEqual([
+      "Kids: School",
+      "🐷 Fun Money A",
+    ]);
+    expect(a?.cautions.join(" ")).toMatch(/another \$80\.08 Amazon charge/);
+    // Amazon didn't say which items, and no item adds up to the refund.
+    expect(a?.items).toEqual([]);
+  });
+
+  test("a split line matching the refund is the confident answer", async () => {
+    const split = {
+      category_name: "Split",
+      subtransactions: [
+        { amount: -68640, category_name: "Baby", deleted: false },
+        { amount: -11440, category_name: "Household", deleted: false },
+      ],
+    };
+    await answerOnAmazon(() => ok(planTxns(byId(AUG_21, split)).filter((t) => t.id !== AUG_23)), {
+      trace: { ...refundTrace(), row },
+    });
+    expect(saved()?.category).toEqual({
+      names: [{ name: "Baby", amount: 6864 }],
+      confident: true,
+    });
+  });
+
+  test.each([
+    ["YNAB refused the token", () => ({ status: 401 }) as GmReply],
+    ["YNAB is limiting requests", () => ({ status: 429 }) as GmReply],
+    ["the charge isn't in YNAB", () => ok([])],
+    ["the charge isn't categorized", () => ok(planTxns((t) => ({ ...t, category_name: null })))],
+  ])("nothing is saved when %s", async (_name, respond) => {
+    await answerOnAmazon(
+      (r) =>
+        r.url.endsWith("/v1/plans") ? { status: 200, body: { data: { plans: [] } } } : respond(),
+      { trace: { ...refundTrace(), row } },
+    );
+    expect(saved()).toBeNull();
+  });
+
+  test("without the YNAB line it was opened from, nothing is saved", async () => {
+    await answerOnAmazon(() => ok(planTxns()));
+    expect(gm.get("acs-answers-v1")).toBeUndefined();
+  });
+
+  test("the YNAB tab saves the answer when it's the one that asked YNAB", async () => {
+    openYnab(() => ok(planTxns()));
+    await handOver({ ...refundTrace(), row });
+    expect(saved()?.category?.names).toEqual([{ name: "🐷 Fun Money A", amount: 8008 }]);
   });
 });

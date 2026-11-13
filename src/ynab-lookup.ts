@@ -234,15 +234,18 @@ export async function lookUpRefund(
 }
 
 /**
- * The answer line: the category the refund goes back to, or the categories it may go back to.
- * Null when no charge was found, since then there's nothing to answer from. Only a guess when
- * one of the order's charges wasn't found: the refund may be for that one.
+ * The category the refund goes back to, or the categories it may go back to, each with the
+ * amount the original charges put there. Null when no charge was found, since then there's
+ * nothing to answer from; "uncategorized" when none of them has a category. Only confident
+ * with one category and every one of the order's charges found: the refund may be for one
+ * that wasn't.
  */
-export function refundAnswer(
+export function refundCategories(
   l: RefundLookup,
-  amount: number,
-): { put: string } | { warn: string } | null {
-  const found = l.charges.flatMap((c) => (c.found ? [c.found] : []));
+): { names: { name: string; amount: number }[]; confident: boolean } | "uncategorized" | null {
+  const found = l.charges.flatMap((c) =>
+    c.found ? [{ ...c.found, amount: c.charge.amount }] : [],
+  );
   if (!found.length) return null;
   const cats = found.flatMap((f) => [
     ...f.lines.map((x) => x.category),
@@ -259,13 +262,43 @@ export function refundAnswer(
         ),
       ];
   const all = hits.length === 1 ? hits : [...new Set(cats.filter(Boolean))];
-  const [one] = all;
-  if (!one) return { warn: "None of these charges are categorized in YNAB yet." };
-  const missing = l.charges.some((c) => !c.found);
-  if (all.length === 1)
-    return { put: missing ? `Probably ${one}.` : `Put ${fmt(amount)} back in ${one}.` };
+  if (!all.length) return "uncategorized";
+  const lines = found.flatMap((f) => (hits.length === 1 ? f.lines.filter((x) => x.hit) : f.lines));
+  // A category only on the other same-amount charge: that whole charge was put there.
+  const altAmount = (name: string) =>
+    found.find((f) => f.alt?.categories.includes(name))?.amount ?? 0;
+  const names = all.map((name) => {
+    const own = lines.filter((x) => x.category === name).reduce((a, x) => a + x.amount, 0);
+    return { name, amount: own || altAmount(name) };
+  });
+  return { names, confident: all.length === 1 && !l.charges.some((c) => !c.found) };
+}
+
+/** The answer as said to the user: "Put $X back in A.", or "Probably A or B." */
+export function categorySentence(names: string[], confident: boolean, amount: number) {
+  const [one] = names;
+  if (confident && one) return `Put ${fmt(amount)} back in ${one}.`;
   // Said once, in the answer: which of these is for the user to tell.
-  return { put: `Probably ${all.slice(0, -1).join(", ")} or ${all.at(-1)}.` };
+  return names.length > 1
+    ? `Probably ${names.slice(0, -1).join(", ")} or ${names.at(-1)}.`
+    : `Probably ${one}.`;
+}
+
+/** The answer line, or a warning standing in for it; null when no charge was found. */
+export function refundAnswer(
+  l: RefundLookup,
+  amount: number,
+): { put: string } | { warn: string } | null {
+  const c = refundCategories(l);
+  if (!c) return null;
+  if (c === "uncategorized") return { warn: "None of these charges are categorized in YNAB yet." };
+  return {
+    put: categorySentence(
+      c.names.map((n) => n.name),
+      c.confident,
+      amount,
+    ),
+  };
 }
 
 // The user's other plans that could hold these charges, newest first: a plan that began after

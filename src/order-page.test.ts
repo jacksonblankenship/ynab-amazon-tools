@@ -11,7 +11,9 @@ import sharedTxns from "../test/fixtures/amazon/order-shared-points.transactions
 import threeDeliveries from "../test/fixtures/amazon/order-three-deliveries.html?raw";
 import threeTxns from "../test/fixtures/amazon/order-three-deliveries.transactions.html?raw";
 import listRows from "../test/fixtures/amazon/transactions-list.rows.html?raw";
+import { gm } from "../test/gm.ts";
 import { loadPage } from "../test/html.ts";
+import { rememberRow, savedAnswer } from "./answers.ts";
 import { solve } from "./matcher.ts";
 import { parseOrder, priceItems } from "./order.ts";
 import { creditRange, focusTarget, orderPage } from "./order-page.ts";
@@ -148,5 +150,46 @@ describe("opened from YNAB", () => {
     await orderPage();
     expect(location.hash).toBe("");
     expect(location.search).toBe("?orderID=1");
+  });
+});
+
+describe("saving what a YNAB line paid for", () => {
+  const ID = "fb543ae8-82f4-4b74-81d9-1d72f989b083";
+  /** The order page opened from YNAB's $236.52 line for the shared-points order. */
+  async function openFromYnab(amount: number, ynabLine = true) {
+    if (ynabLine) rememberRow({ amount, kind: "charge", dates: ["2026-09-11"], id: ID });
+    loadPage(shared);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(sharedTxns)),
+    );
+    vi.stubGlobal("scrollTo", () => {});
+    history.replaceState(
+      null,
+      "",
+      `/your-orders/order-details?orderID=114-7767348-8987501#acs-charge=${amount}&acs-on=September%2010%2C%202026`,
+    );
+    await orderPage();
+    return savedAnswer({ amount, kind: "charge", dates: ["2026-09-11"], id: ID });
+  }
+
+  test("the items a charge paid for are saved under the YNAB line, with their amounts", async () => {
+    const a = await openFromYnab(23652);
+    expect(a).toMatchObject({ kind: "charge", amount: 23652, date: "2026-09-11", id: ID });
+    expect(a?.orderId).toBe("114-7767348-8987501");
+    // D2's one item, topped up by points, so the card paid $236.52 of it.
+    expect(a?.items).toEqual([{ title: expect.any(String), amount: 23652, qty: 1 }]);
+    expect(a?.exact).toBe(true);
+    // The points were shared with another order, so the split rests on a guess at its share.
+    expect(a?.cautions.join(" ")).toMatch(/shared with another order/);
+  });
+
+  test("a charge that couldn't be tied to a delivery saves nothing", async () => {
+    expect(await openFromYnab(99999)).toBeNull();
+  });
+
+  test("without the YNAB line it was opened from, nothing is saved", async () => {
+    await openFromYnab(23652, false);
+    expect(gm.get("acs-answers-v1")).toBeUndefined();
   });
 });

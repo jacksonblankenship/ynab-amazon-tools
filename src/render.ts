@@ -9,7 +9,16 @@ import { resultPanel } from "./lib/result-panel.ts";
 import { reportLine } from "./lib/suite.ts";
 import { splitGroup } from "./matcher.ts";
 import { suite } from "./overlay.ts";
-import type { Focus, Order, RenderResult, Solution, Split, Trace, Txn } from "./types.ts";
+import type {
+  AnswerBody,
+  Focus,
+  Order,
+  RenderResult,
+  Solution,
+  Split,
+  Trace,
+  Txn,
+} from "./types.ts";
 
 const CHANGED = "Amazon may have changed this page.";
 
@@ -131,6 +140,8 @@ export interface Shown {
   landed: () => void;
   /** A refund's trace, for the YNAB tab. */
   trace?: Trace;
+  /** What the charge paid for, to save for the YNAB line it was opened from. */
+  answer?: AnswerBody;
 }
 
 /** A floating panel whose outline on the page goes away with it. */
@@ -375,5 +386,20 @@ export function renderFocus(
     );
   if (absorbed > 0) how.push(line(null, `On ${these}, ${shortBy(solution, gi)}.`));
   body.push(howItMatched(how));
-  return floating({ amount: fmt(c.amount), meta: focus.date || c.date, body }, boxes);
+  const shown = floating({ amount: fmt(c.amount), meta: focus.date || c.date, body }, boxes);
+  // Part of the page unreadable: the answer may be off, so it's not kept.
+  if (changed || !order.orderId) return shown;
+  return {
+    ...shown,
+    answer: {
+      orderId: order.orderId,
+      items: split.lines.map((l) => ({
+        title: short(l.item.title),
+        amount: l.amount,
+        qty: l.item.qty,
+      })),
+      exact: split.exact,
+      cautions: [...warnings],
+    },
+  };
 }

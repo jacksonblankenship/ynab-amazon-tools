@@ -4,6 +4,7 @@
 import { describe, expect, test } from "vitest";
 import { loadPage } from "../test/html.ts";
 import registerRows from "../test/fixtures/ynab/register-rows.html?raw";
+import { rowFor } from "./answers.ts";
 import { ynabPage } from "./ynab-page.ts";
 import { planFor } from "./ynab-lookup.ts";
 
@@ -162,5 +163,36 @@ describe("rows that aren't Amazon orders", () => {
     hover(row(0));
     await afterHide();
     expect(button().style.display).not.toBe("flex");
+  });
+});
+
+describe("opening a line on Amazon", () => {
+  test("leaves the YNAB line for the Amazon tab, with its transaction id, outside the link", () => {
+    openRegister();
+    const r = rowWith("2026-09-11", "$236.52");
+    hover(r);
+    button().dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    const id = r.getAttribute("data-row-id") ?? "";
+    expect(id).not.toBe("");
+    expect(rowFor(23652, "charge", "September 10, 2026")).toEqual({
+      amount: 23652,
+      kind: "charge",
+      date: "2026-09-11",
+      id,
+    });
+    expect(button().href).not.toContain(id);
+  });
+
+  test("a middle-click leaves it too", () => {
+    openRegister();
+    hover(rowWith("2026-09-11", "$68.64"));
+    button().dispatchEvent(new MouseEvent("auxclick", { bubbles: true, button: 1 }));
+    expect(rowFor(6864, "refund", "September 10, 2026")?.date).toBe("2026-09-11");
+  });
+
+  test("hovering alone leaves nothing", () => {
+    openRegister();
+    hover(rowWith("2026-09-11", "$236.52"));
+    expect(rowFor(23652, "charge", "September 10, 2026")).toBeUndefined();
   });
 });

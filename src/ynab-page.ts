@@ -1,4 +1,5 @@
 // YNAB: "Find on Amazon" button on Amazon transactions.
+import { rememberRow } from "./answers.ts";
 import { ynabButton } from "./lib/ynab.ts";
 import { AMAZON_PAYEE, planIn, rememberPlan } from "./ynab-lookup.ts";
 
@@ -15,4 +16,7 @@ export const ynabPage = () =>
       if (plan) rememberPlan(c.amount, plan);
       return `https://www.amazon.com/cpe/yourpayments/transactions#acs-find=${c.amount}&acs-date=${c.dates.join(",")}&acs-kind=${c.kind}`;
     },
+    // The line opened, transaction id and all, also goes by Tampermonkey's storage, so the
+    // Amazon tab can save what it finds under it.
+    onOpen: (c) => rememberRow(c),
   });

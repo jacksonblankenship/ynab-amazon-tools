@@ -9,6 +9,8 @@ export interface YnabCharge {
   kind: "charge" | "refund";
   /** One date, or both readings when YNAB's date order can't be determined. */
   dates: string[];
+  /** YNAB's id for the transaction, when the row carries one. */
+  id?: string;
 }
 
 export function ynabButton(opts: {
@@ -19,6 +21,11 @@ export function ynabButton(opts: {
   /** Tooltip and accessible name. */
   label: string;
   href: (c: YnabCharge) => string;
+  /**
+   * The button was clicked (or middle-clicked) on `c`, before the link opens. A plain click's
+   * opening can be stopped with `e.preventDefault()`.
+   */
+  onOpen?: (c: YnabCharge, e: MouseEvent) => void;
 }) {
   const p = opts.prefix;
   const pill = el("a", `${p}-yn`, searchIcon(14));
@@ -28,6 +35,7 @@ export function ynabButton(opts: {
   pill.rel = "noopener";
   document.body.appendChild(pill);
   let current: Element | null = null;
+  let charge: YnabCharge | null = null;
   let hideTimer: ReturnType<typeof setTimeout> | undefined;
 
   const show = (row: Element) => {
@@ -37,11 +45,14 @@ export function ynabButton(opts: {
     const inn = money($(".ynab-grid-cell-inflow", row));
     const amount = out || inn;
     if (!amount) return hide(0);
-    pill.href = opts.href({
+    const id = row.getAttribute("data-row-id");
+    charge = {
       amount,
       kind: out ? "charge" : "refund",
       dates: ynabDates(txt($(".ynab-grid-cell-date", row))),
-    });
+      ...(id ? { id } : {}),
+    };
+    pill.href = opts.href(charge);
     const cell = $(".ynab-grid-cell-payeeName", row) || row;
     const r = cell.getBoundingClientRect();
     // Pop in when it appears, not when it moves between rows.
@@ -84,8 +95,12 @@ export function ynabButton(opts: {
   ["mousedown", "click"].forEach((t) => {
     pill.addEventListener(t, (e) => e.stopPropagation());
   });
+  pill.addEventListener("auxclick", (e) => {
+    if (charge && e.button === 1) opts.onOpen?.(charge, e);
+  });
   let pressTimer: ReturnType<typeof setTimeout> | undefined;
-  pill.addEventListener("click", () => {
+  pill.addEventListener("click", (e) => {
+    if (charge) opts.onOpen?.(charge, e);
     clearTimeout(pressTimer);
     pill.classList.remove(`${p}-press`);
     void pill.offsetWidth; // restart the animation

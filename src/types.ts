@@ -124,6 +124,8 @@ export interface Focus {
   kind: "charge" | "refund";
   /** The YNAB plan the refund was opened from (from Tampermonkey's storage), for its category. */
   plan?: string;
+  /** The YNAB line it was opened from (from Tampermonkey's storage), to save the answer under. */
+  row?: YnabRow;
 }
 
 export interface FindQuery {
@@ -149,6 +151,8 @@ export interface Trace {
   lookupError?: LookupError;
   /** Set once a YNAB tab has shown it, so it shows once. */
   shown?: boolean;
+  /** The YNAB line the refund was opened from, to save the answer under. */
+  row?: YnabRow;
 }
 
 /** A YNAB lookup that failed: what to say, and whether the token or the script is at fault. */
