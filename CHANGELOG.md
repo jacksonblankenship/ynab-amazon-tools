@@ -1,5 +1,47 @@
 # Changelog
 
+## [0.4.0](https://github.com/jacksonblankenship/ynab-amazon-tools/compare/v0.3.0...v0.4.0) (2026-11-13)
+
+
+### Features
+
+* click an amount to copy it ([11d35e7](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/11d35e70b32533d82931636f8111f4815a14f096))
+* keep what a YNAB line was found to be, for 90 days ([2f30165](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/2f30165482fac9abca477e5ac783109e1091fa70))
+* lead the charge panel with its items ([db3d0af](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/db3d0af0ba10b0bc830ca22007774ae1f371e3c4))
+* move the whole order's other payments behind "How it matched" ([bbf19e5](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/bbf19e559098eb6dffd55ee9f3e13de4771802d5))
+* save the answer once Amazon works out a YNAB line ([c484437](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/c484437e782b00f4842d26b77381da146e192017))
+* show a saved answer in YNAB instead of asking Amazon again ([de7bdc3](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/de7bdc37508c51fd119ffb147a2390e36531713f))
+* show order page results in a floating panel ([27ab424](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/27ab424bb22e9496b8fcd6045f3b8d112bedd7f7))
+* show where a refund goes on the Amazon panel ([b3cad46](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/b3cad461364eaba8c5a50fff56349d91afe9f570))
+* tuck refund details behind "How it matched" ([154f345](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/154f345faf4393ebdef04226246136f5b8ecf479))
+
+
+### Bug Fixes
+
+* close gaps in the floating order panels found in review ([e6d2174](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/e6d21746d3fbc15f87876ff68c0f043419302a3e))
+* define "How it matched" once and quiet the refund panel's status lines ([06c8eea](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/06c8eea546ccd3772b6da15e553dde43d088dd09))
+* don't call coupon savings points or a gift card ([300c20c](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/300c20c3747b5e91e40f8d481c6bbc9fbada78a5))
+* don't let an uncategorized split line hide the matching category ([f0934ca](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/f0934cab72e8eceeb576d7f79ca77add9e9b67d1))
+* don't name one category when two matching charges disagree ([7678abd](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/7678abdc09424d76e237584807e92e6bc525a7ed))
+* draw a hedged refund answer quieter than a sure one ([e414268](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/e414268c927004246f4e4fa9d8327a7f819861ea))
+* hand a failed YNAB lookup to the YNAB tab instead of asking again ([1936203](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/193620370163d54a39a32bbe14349c8fbf039bc2))
+* hedge a refund's answer when one of the order's charges isn't in YNAB ([7a61f61](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/7a61f61fbf220c3a1ba5bc6957321f10153fa751))
+* keep the delivery the panel points at out from under it ([ddb0297](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/ddb029793aa312a0fe4eb0498bd50a19785df231))
+* keep the YNAB plan id away from Amazon's page ([695eb99](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/695eb99001fda730df666008c22b3a4c57a5fb30))
+* match charges on an order paid partly with shared points ([99587d5](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/99587d5eeb36add266c68fa196502fb3cdf3971a))
+* match charges to the right deliveries when a coupon covers only some items ([7b3b3d3](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/7b3b3d36d1c65e6a019fb7788cf63f991ee7706f))
+* name the one category when a split line matches ([c980511](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/c98051194da595e35760caa7e9cda506dc3a3533))
+* only trust a coupon match when the overrun is the delivery's coupon share ([c7ac7ba](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/c7ac7ba20c266ee22203bd69513247098b317fd6))
+* read amazon's first transactions from the page's data, not its layout ([7ae3441](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/7ae3441d494ed15c0d84dfaee91e5cfa45bf09f2))
+* say once that the charges didn't load, and claim nothing about them ([0848028](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/084802805d01bc41b88cbb7a0ca737e7bc55f01e))
+* send report links straight to a new issue ([79a5f9e](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/79a5f9ed5579128530c6cf487a68b44c3fba379c))
+* skip damaged saved amazon transactions instead of failing every search ([60ce9b7](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/60ce9b78393f9f16634572209a879141600695a9))
+* stop loading a web font from Google on Amazon pages ([cbd9bbe](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/cbd9bbe06199b20e8fb0883127a7aa1eded1da67))
+* stop pointing at amounts below when a single item shows none ([36d223f](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/36d223f78d3e5c7ded82ee7365d89b60c3f529a1))
+* tell screen readers when an amount is copied ([1dbe5d4](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/1dbe5d420c03a344c89595f37e4e33021129e2b2))
+* tidy the floating order panels after a live check ([33267fa](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/33267fae398a7a51a011b29dab4f01e842e5ccc9))
+* tidy the memo, the matching split line and the panel date ([077d38e](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/077d38e67b91c0f05bc866b2639f2db2d93192a0))
+
 ## [0.3.0](https://github.com/jacksonblankenship/ynab-amazon-tools/compare/v0.2.1...v0.3.0) (2026-11-13)
 
 
