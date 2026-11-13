@@ -1,29 +1,7 @@
 /*
- * The full order breakdown (a banner per delivery, a panel for the order), in the
- * suite's look. The button, overlay and single-charge panel come from src/lib/suite.css,
- * which also defines the acs-fadeup animation used here.
+ * What goes inside the result panels (src/lib/suite.css), plus the order page's floating
+ * "Match charges to items" button. Nothing here styles Amazon's or YNAB's own elements.
  */
-.acs-panel,
-.acs-banner {
-  box-sizing: border-box;
-  margin: 0 0 14px;
-  padding: 14px 20px;
-  background: #fff;
-  border: 1px solid #ece7da;
-  border-radius: 14px;
-  box-shadow:
-    0 1px 2px rgb(25 24 24 / 6%),
-    0 6px 20px rgb(25 24 24 / 7%);
-  font:
-    400 14px / 1.45 Figtree,
-    -apple-system,
-    "Segoe UI",
-    system-ui,
-    sans-serif;
-  color: #191818;
-  text-align: left;
-  animation: acs-fadeup 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
 .acs-h {
   margin-bottom: 4px;
   font-size: 15px;
@@ -72,21 +50,9 @@
   border-top: 1px solid #f3eee2;
   font-weight: 700;
 }
-.acs-list {
-  margin: 4px 0 0;
-  padding-left: 18px;
-}
-.acs-panel a,
 .acs-result a {
   /* biome-ignore lint/complexity/noImportantStyles: has to beat the host page's own link styles */
   color: #475afa !important;
-}
-.acs-foot {
-  margin: 12px -20px -14px;
-  padding: 10px 20px;
-  border-top: 1px solid #f3eee2;
-  font-size: 11px;
-  color: #696763;
 }
 .acs-result .acs-split:first-child {
   margin-top: 0;
@@ -129,4 +95,76 @@
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+}
+.acs-del {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f3eee2;
+}
+.acs-result .acs-del:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.acs-del .acs-split {
+  margin-top: 6px;
+  padding-top: 0;
+  border-top: 0;
+}
+.acs-result button.acs-del-h {
+  margin: 0 0 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #191818;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.acs-result button.acs-del-h:hover {
+  text-decoration: underline;
+}
+.acs-more {
+  margin-top: 10px;
+}
+.acs-launch {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483645;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #545bfe;
+  color: #fff;
+  box-shadow:
+    0 1px 2px rgb(25 24 24 / 12%),
+    0 6px 20px rgb(25 24 24 / 16%);
+  font:
+    600 14px / 1.2 Figtree,
+    -apple-system,
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+  animation: acs-fadeup 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.acs-launch[hidden] {
+  display: none;
+}
+.acs-launch.acs-busy {
+  cursor: progress;
+  opacity: 0.75;
+}
+.acs-launch.acs-busy svg {
+  animation: acs-spin 900ms linear infinite;
+}
+.acs-launch:focus-visible {
+  outline: 2px solid #191818;
+  outline-offset: 2px;
 }

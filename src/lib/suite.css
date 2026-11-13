@@ -485,13 +485,19 @@ a.pfx-report {
   color: #696763;
 }
 
-/* The retailer's own element that the result is about. */
-/* Drawn just inside its edge (following its own corners), so a neighbouring box or a
-   clipping container on the retailer's page can't hide a side of it. */
-.pfx-glow {
-  outline: 2px solid #545bfe;
-  outline-offset: -2px;
+/* The retailer's own element that the result is about, outlined from above the page
+   (src/lib/highlight.ts) so none of the retailer's markup or styles are touched. */
+.pfx-ring {
+  position: absolute;
+  z-index: 2147483640;
+  box-sizing: border-box;
+  border: 2px solid #545bfe;
+  border-radius: 10px;
+  pointer-events: none;
   animation: pfx-glow 1400ms ease-out 2;
+}
+.pfx-ring[hidden] {
+  display: none;
 }
 
 @keyframes pfx-pop {
@@ -564,7 +570,7 @@ a.pfx-report {
   #pfx-overlay,
   #pfx-overlay *,
   .pfx-result,
-  .pfx-glow {
+  .pfx-ring {
     /* biome-ignore lint/complexity/noImportantStyles: overrides every animation above */
     animation-duration: 1ms !important;
     /* biome-ignore lint/complexity/noImportantStyles: overrides every animation above */

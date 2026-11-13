@@ -27,9 +27,7 @@ export const cardsUnreadable = (rows: Txn[]) =>
 /** The page shows "Order #" lines but none of them read as a transaction. */
 export const rowsUnreadable = (root: Element) =>
   !transactionRows(root).length &&
-  leaves(root).some(
-    (e) => ORDER_RE.test(txt(e)) && !e.closest("#acs-overlay, .acs-result, .acs-panel"),
-  );
+  leaves(root).some((e) => ORDER_RE.test(txt(e)) && !e.closest("#acs-overlay, .acs-result"));
 
 // Reads transactions by what they say, not by how Amazon builds the page: a transaction
 // is the largest block around an "Order #" that holds exactly one dollar amount. Its date
@@ -37,7 +35,7 @@ export const rowsUnreadable = (root: Element) =>
 // layout); a masked card number makes it a card charge.
 export function transactionRows(root: Element): Element[] {
   const orderLeaves = leaves(root).filter(
-    (e) => ORDER_RE.test(txt(e)) && !e.closest("#acs-overlay, .acs-result, .acs-panel"),
+    (e) => ORDER_RE.test(txt(e)) && !e.closest("#acs-overlay, .acs-result"),
   );
   const rows: Element[] = [];
   for (const leaf of orderLeaves) {

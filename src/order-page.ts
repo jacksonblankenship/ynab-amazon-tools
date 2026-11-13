@@ -1,23 +1,18 @@
 // Order details page: parse, fetch the order's charges, match them, and show the result.
 import { GM_setValue } from "$";
 import { nearest } from "./dates.ts";
-import { $, $$ } from "./lib/dom.ts";
+import { $, el, line } from "./lib/dom.ts";
 import { errMsg, PageChanged } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
+import { searchIcon } from "./lib/suite.ts";
 import { solve } from "./matcher.ts";
 import { parseOrder, priceItems } from "./order.ts";
 import { overlayDone, overlayFound, overlayStop, signal } from "./overlay.ts";
 import { refundPanel, TRACE_KEY, traceRefund } from "./refund.ts";
-import { render, renderFocus } from "./render.ts";
+import { card, renderFocus, renderOrder, type Shown } from "./render.ts";
 import { fetchTransactions } from "./transactions.ts";
 import { remember } from "./txn-cache.ts";
-import type { Focus, Txn } from "./types.ts";
-
-/** The delivery's whole card on the page, to highlight; the box itself if it has none of its own. */
-const card = (box: Element) => {
-  const c = box.closest(".a-box");
-  return c && $$('[data-component="shipmentStatus"]', c).length === 1 ? c : box;
-};
+import type { Focus, ParsedOrder, Txn } from "./types.ts";
 
 const unreadable = () =>
   overlayStop("Couldn't read this order page", "Amazon may have changed its layout.", [], {
@@ -25,28 +20,39 @@ const unreadable = () =>
   });
 
 export async function orderPage() {
-  // parseOrder copes without the "shipments" wrapper, so only the items themselves are required.
-  if (!$('[data-component="purchasedItems"]')) {
-    if (focusTarget()) unreadable();
-    return;
-  }
   const focus = focusTarget();
-  const parsed = parseOrder(document);
-  const items = parsed.shipments.flatMap((s) => s.items);
+  // parseOrder copes without the "shipments" wrapper, so only the items themselves are required.
+  const parsed = $('[data-component="purchasedItems"]') ? parseOrder(document) : null;
+  const items = parsed?.shipments.flatMap((s) => s.items) ?? [];
   // Deliveries but no items, or no prices: any match made from that would be nonsense.
-  if (!items.length || parsed.unpriced === items.length) {
-    unreadable();
+  if (!parsed || !items.length || parsed.unpriced === items.length) {
+    if (focus) unreadable();
     return;
   }
-  if (focus)
-    overlayFound(
-      `Found ${fmt(focus.amount)}`,
-      focus.kind === "refund" ? "Finding what it refunded" : "Finding the items it paid for",
-    );
+  // Visited on its own, not from YNAB: matching costs Amazon a request, so only on asking.
+  if (!focus) return launcher(parsed);
+  overlayFound(
+    `Found ${fmt(focus.amount)}`,
+    focus.kind === "refund" ? "Finding what it refunded" : "Finding the items it paid for",
+  );
+  const search = signal();
+  const shown = await match(parsed, focus);
+  // Cancelled while the charges loaded: leave the page as it is.
+  if (search.aborted) {
+    shown.panel.remove();
+    return;
+  }
+  const cards = shown.boxes.map(card);
+  const top = Math.min(...cards.map((c) => c.getBoundingClientRect().top));
+  if (Number.isFinite(top)) window.scrollTo({ top: window.scrollY + top - 16 });
+  overlayDone(shown.panel, shown.landed);
+}
+
+/** Load the order's charges and show what they paid for: the one asked about, or all of them. */
+async function match(parsed: ParsedOrder, focus: Focus | null): Promise<Shown> {
   const priced = priceItems(parsed);
   const { order, warnings } = priced;
   let { changed } = priced;
-  const search = signal();
   let txns: Txn[] = [];
   let error: string | null = null;
   if (order.orderId) {
@@ -62,8 +68,6 @@ export async function orderPage() {
     error = "Couldn't find the order number on this page";
     changed = true;
   }
-  // Cancelled while the charges loaded: leave the page as it is.
-  if (focus && search.aborted) return;
   const charges = txns.filter((t) => t.kind === "charge");
   const credits = txns.filter((t) => t.kind === "credit");
   const refunds = txns.filter((t) => t.kind === "refund");
@@ -87,44 +91,65 @@ export async function orderPage() {
     focus?.kind === "charge" &&
     solution &&
     renderFocus(order, charges, solution, focus, warnings, changed);
-  if (shown) {
-    const cards = shown.boxes.map(card);
-    const top = Math.min(...cards.map((c) => c.getBoundingClientRect().top));
-    if (Number.isFinite(top)) window.scrollTo({ top: window.scrollY + top - 16 });
-    overlayDone(shown.panel, () => {
-      for (const c of cards) c.classList.add("acs-glow");
-    });
-    return;
-  }
-  render(order, { charges, credits, refunds, solution, warnings, error, changed });
+  if (shown) return shown;
   // Opened from a YNAB refund: show it, and hand its trace to the YNAB tab.
   const sameRefunds =
     focus?.kind === "refund" && !error ? refunds.filter((r) => r.amount === focus.amount) : [];
   const refund = focus && nearest(sameRefunds, (r) => r.date, focus.date);
   if (refund) {
     const trace = traceRefund(order, charges, refund);
-    const panel = refundPanel(trace);
     try {
       GM_setValue(TRACE_KEY, trace);
     } catch {
       /* ignore */
     }
-    panel.scrollIntoView?.({ block: "center" });
-    overlayDone(panel);
-    return;
+    return { panel: refundPanel(trace), boxes: [], landed: () => {} };
   }
-  if (focus) {
-    overlayStop(
-      error
-        ? "Couldn't read Amazon's charges"
-        : focus.kind === "refund"
-          ? `Couldn't find the ${fmt(focus.amount)} refund on this order`
-          : `Couldn't tie ${fmt(focus.amount)} to a delivery`,
-      `${error ? `${error}. ` : ""}Showing the full breakdown for this order instead.`,
-      [],
-      { report: changed },
-    );
-  }
+  // The one asked about couldn't be pinned down: say so above the whole order.
+  const lead = focus
+    ? [
+        line(
+          "acs-warn",
+          error
+            ? "Couldn't read Amazon's charges for this order."
+            : focus.kind === "refund"
+              ? `Couldn't find the ${fmt(focus.amount)} refund on this order. Here's the whole order instead.`
+              : `Couldn't tie ${fmt(focus.amount)} to a delivery. Here's the whole order instead.`,
+        ),
+      ]
+    : [];
+  return renderOrder(
+    order,
+    { charges, credits, refunds, solution, warnings, error, changed },
+    lead,
+  );
+}
+
+/** A small button floating over the page that matches the order's charges when pressed. */
+function launcher(parsed: ParsedOrder) {
+  const b = el("button", "acs-launch", `${searchIcon(14)}<span>Match charges to items</span>`);
+  b.type = "button";
+  document.body.appendChild(b);
+  b.addEventListener("click", async () => {
+    b.disabled = true;
+    b.classList.add("acs-busy");
+    try {
+      const shown = await match(parsed, null);
+      b.hidden = true;
+      shown.landed();
+      // Back once the panel is closed, for another look.
+      new MutationObserver((_, mo) => {
+        if (shown.panel.isConnected) return;
+        mo.disconnect();
+        b.hidden = false;
+      }).observe(document.body, { childList: true });
+    } catch (e) {
+      overlayStop("Something went wrong", errMsg(e), [], { report: true });
+    } finally {
+      b.disabled = false;
+      b.classList.remove("acs-busy");
+    }
+  });
 }
 
 /** Order page opened from YNAB: #acs-charge=1999&acs-on=January%205%2C%202026[&acs-kind=refund] */

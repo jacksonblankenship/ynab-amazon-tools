@@ -1,6 +1,6 @@
 // Refund tracing, Amazon side: refund → refunded items → the charges that may have paid
 // for them. The trace goes to the YNAB tab (ynab-trace.ts), which finds their categories.
-import { $, line } from "./lib/dom.ts";
+import { $$, line } from "./lib/dom.ts";
 import { must } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
 import { resultPanel } from "./lib/result-panel.ts";
@@ -87,7 +87,7 @@ export function refundHint(t: Trace): HTMLElement[] {
   return only && !more.length ? [line("acs-muted", `Probably for: ${itemNames(only)}`)] : [];
 }
 
-/** The refund's panel on the order page, pointing back to YNAB for the categories. */
+/** The refund's panel, floating over the order page, pointing back to YNAB for the categories. */
 export function refundPanel(t: Trace) {
   const body: Node[] = [...refundHint(t)];
   if (t.charges.length)
@@ -105,14 +105,16 @@ export function refundPanel(t: Trace) {
         "Amazon didn't show a card charge for this order, so there's no original charge to trace.",
       ),
     );
+  $$(".acs-result").forEach((e) => {
+    e.remove();
+  });
   const panel = resultPanel(suite, {
+    floating: true,
     label: "This refund",
     amount: fmt(t.refund.amount),
     meta: [t.refund.date, t.refund.method].filter(Boolean).join(" · "),
     body,
   });
-  const anchor = $('[data-component="shipments"]');
-  const before = $(".acs-panel") ?? anchor;
-  before?.parentNode?.insertBefore(panel, before);
+  document.body.appendChild(panel);
   return panel;
 }
