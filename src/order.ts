@@ -1,13 +1,17 @@
 // Order details page: read deliveries, items and the Order Summary, then price each item.
 import { $, $$, txt } from "./lib/dom.ts";
 import { allocateBy, cents, fmt } from "./lib/money.ts";
-import { IS_MONEY, leaves, moneyIn } from "./scrape.ts";
+import { IS_MONEY, leaves, moneyIn, ORDER_RE } from "./scrape.ts";
 import type { Order, ParsedOrder, Shipment, Summary } from "./types.ts";
 
 export function parseOrder(doc: Document): ParsedOrder {
   const orderId =
-    (txt($('[data-component="orderId"]', doc)).match(/\d{3}-\d{7}-\d{7}/) || [])[0] ||
-    new URLSearchParams(location.search).get("orderID");
+    (txt($('[data-component="orderId"]', doc)).match(ORDER_RE) || [])[0] ||
+    new URLSearchParams(location.search).get("orderID") ||
+    // Last resort: the "Order # 123-…" the page shows people.
+    (txt(doc.body).match(new RegExp(`order\\s*#\\s*(${ORDER_RE.source})`, "i")) || [])[1] ||
+    null;
+  let unpriced = 0;
 
   let blocks = $$('[data-component="shipments"] [data-component="purchasedItems"]', doc);
   if (!blocks.length) blocks = $$('[data-component="purchasedItems"]', doc);
@@ -16,7 +20,12 @@ export function parseOrder(doc: Document): ParsedOrder {
     let box = pi;
     while (box.parentElement && !box.querySelector('[data-component="shipmentStatus"]'))
       box = box.parentElement;
-    if ($$('[data-component="purchasedItems"]', box).length > 1) box = pi;
+    // No status anywhere means the climb reached the whole page; stay on the items instead.
+    if (
+      $$('[data-component="purchasedItems"]', box).length > 1 ||
+      !box.querySelector('[data-component="shipmentStatus"]')
+    )
+      box = pi;
     const status = txt($('[data-component="shipmentStatus"]', box)).split(/(?<=\d)\s+(?=[A-Z])/)[0];
 
     let titles = $$('[data-component="itemTitle"]', pi);
@@ -33,8 +42,11 @@ export function parseOrder(doc: Document): ParsedOrder {
         root = up;
       }
       const priceBox = $('[data-component="unitPrice"]', root);
-      const price =
-        cents(txt($(".a-offscreen", priceBox || root)) || moneyIn(priceBox || root)[0] || "") || 0;
+      const read = cents(
+        txt($(".a-offscreen", priceBox || root)) || moneyIn(priceBox || root)[0] || "",
+      );
+      if (read == null) unpriced++;
+      const price = read ?? 0;
       const qty = itemQty(root);
       return { title: txt(t), price, qty, ext: price * qty, shipment: idx };
     });
@@ -66,7 +78,7 @@ export function parseOrder(doc: Document): ParsedOrder {
   // Amazon's own pre-tax total is the most reliable source for shipping/fees/discounts combined.
   if (summary.beforeTax != null && summary.subtotal != null)
     summary.preTaxAdj = summary.beforeTax - summary.subtotal;
-  return { orderId, shipments, summary };
+  return { orderId, shipments, summary, unpriced };
 }
 
 /** Quantity: Amazon overlays it as a bare number on the product image; otherwise "Qty: N" text. */
@@ -125,7 +137,7 @@ export function priceItems(order: ParsedOrder): {
   const sumExt = items.reduce((a, i) => a + i.ext, 0);
   const s = order.summary;
   const warnings: string[] = [];
-  const unpriced = items.filter((i) => !i.price).length;
+  const { unpriced } = order;
   if (unpriced)
     warnings.push(`Couldn't read the price of ${unpriced} item${unpriced > 1 ? "s" : ""}.`);
   if (s.subtotal == null || s.grand == null)

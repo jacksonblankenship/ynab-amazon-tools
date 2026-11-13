@@ -18,17 +18,27 @@ const card = (box: Element) => {
   return c && $$('[data-component="shipmentStatus"]', c).length === 1 ? c : box;
 };
 
+const unreadable = () =>
+  overlayStop("Couldn't read this order page", "Amazon may have changed its layout.", [], {
+    report: true,
+  });
+
 export async function orderPage() {
-  if (!$('[data-component="shipments"] [data-component="purchasedItems"]')) {
-    if (focusTarget())
-      overlayStop("Couldn't read this order page", "Amazon may have changed its layout.", [], {
-        report: true,
-      });
+  // parseOrder copes without the "shipments" wrapper, so only the items themselves are required.
+  if (!$('[data-component="purchasedItems"]')) {
+    if (focusTarget()) unreadable();
     return;
   }
   const focus = focusTarget();
+  const parsed = parseOrder(document);
+  const items = parsed.shipments.flatMap((s) => s.items);
+  // Deliveries but no items, or no prices: any match made from that would be nonsense.
+  if (!items.length || parsed.unpriced === items.length) {
+    unreadable();
+    return;
+  }
   if (focus) overlayFound(`Found ${fmt(focus.amount)}`, "Finding the items it paid for");
-  const priced = priceItems(parseOrder(document));
+  const priced = priceItems(parsed);
   const { order, warnings } = priced;
   let { changed } = priced;
   const search = signal();

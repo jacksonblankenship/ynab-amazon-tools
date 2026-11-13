@@ -41,7 +41,8 @@ function splitTable(split: Split, multi: boolean) {
 }
 
 export function render(order: Order, result: RenderResult) {
-  const anchor = $('[data-component="shipments"]');
+  // Without the shipments wrapper, the panel goes above the first delivery instead.
+  const anchor = $('[data-component="shipments"]') ?? order.shipments[0]?.box;
   const anchorParent = anchor?.parentNode;
   if (!anchor || !anchorParent)
     throw new PageChanged(

@@ -40,6 +40,8 @@ export interface ParsedOrder {
   orderId: string | null;
   shipments: ParsedShipment[];
   summary: Summary;
+  /** Items whose price couldn't be read (a $0.00 item is read, not counted here). */
+  unpriced: number;
 }
 
 export interface Order extends Omit<ParsedOrder, "shipments"> {
