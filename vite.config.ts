@@ -2,8 +2,8 @@ import { defineConfig } from "vite";
 import monkey from "vite-plugin-monkey";
 
 export default defineConfig({
-  // Keep the shipped CSS readable, like the JS (which Vite leaves unminified for userscripts).
-  build: { cssMinify: false },
+  // Ship readable code, so anyone can check what the installed script does (the README says so).
+  build: { minify: false, cssMinify: false },
   plugins: [
     monkey({
       entry: "src/main.ts",
