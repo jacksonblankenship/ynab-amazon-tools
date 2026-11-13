@@ -28,13 +28,18 @@ export function solve(
   // Only the totals and item counts matter here, so tests can pass plain objects.
   shipments: readonly Pick<Shipment, "total" | "items">[],
   charges: readonly Charge[],
-  credit: number,
+  /**
+   * Points/gift-card money paid toward the order: an amount, or a range when part of it was
+   * shared with other orders and this order's share isn't known.
+   */
+  credit: number | readonly [number, number],
 ): {
   solution: Solution | null;
   /** The search hit its step limit, so a better match (or any match) may exist. */
   incomplete: boolean;
 } {
   const m = charges.length;
+  const [lo, hi] = typeof credit === "number" ? [credit, credit] : credit;
   const order = charges
     .map((c, j) => ({ j, amount: c.amount }))
     .sort((a, b) => b.amount - a.amount);
@@ -82,7 +87,7 @@ export function solve(
             absorbing++;
           } else return;
         }
-        const aErr = Math.abs(absorbed - credit);
+        const aErr = absorbed < lo ? lo - absorbed : absorbed > hi ? absorbed - hi : 0;
         if (aErr > 3 + 2 * absorbing) return;
         score += err + aErr + absorbing * 0.5;
         const sig = picked.map((w) => (w ? w.sig : "x")).join("|");
