@@ -75,7 +75,7 @@ ask something like:
   and if Amazon pushes back, it tells you how long to wait.
 - Amazon and YNAB change their pages without warning. If something breaks, or
   you find a problem in the code,
-  [open an issue](https://github.com/jacksonblankenship/ynab-amazon-tools/issues)
+  [open an issue](https://github.com/jacksonblankenship/ynab-amazon-tools/issues/new)
   or send a pull request.
 
 ## Disclaimer

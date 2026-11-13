@@ -13,7 +13,7 @@ export default defineConfig({
         author: "jacksonblankenship",
         icon: "https://raw.githubusercontent.com/jacksonblankenship/ynab-amazon-tools/main/assets/icon.svg",
         homepageURL: "https://github.com/jacksonblankenship/ynab-amazon-tools",
-        supportURL: "https://github.com/jacksonblankenship/ynab-amazon-tools/issues",
+        supportURL: "https://github.com/jacksonblankenship/ynab-amazon-tools/issues/new",
         // Always the newest release, so Tampermonkey's update checks see new versions no
         // matter which release link the script was installed from.
         downloadURL:

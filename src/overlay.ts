@@ -6,7 +6,7 @@ export const suite: Suite = {
   prefix: "acs",
   name: "Amazon Charge Finder",
   site: "Amazon",
-  issues: "https://github.com/jacksonblankenship/ynab-amazon-tools/issues",
+  issues: "https://github.com/jacksonblankenship/ynab-amazon-tools/issues/new",
 };
 
 /** The search sent over from YNAB, kept in sessionStorage across transactions pages. */
