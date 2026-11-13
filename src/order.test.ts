@@ -114,6 +114,35 @@ describe("an order with three deliveries and an item coupon", () => {
   });
 });
 
+describe("coupon savings each delivery's estimate includes", () => {
+  const discounts = (doc: Document) =>
+    priceItems(parseOrder(doc)).order.shipments.map((s) => s.discount ?? 0);
+
+  test("the $3.00 coupon is spread over the deliveries, with its tax", () => {
+    const shares = discounts(loadPage(threeDeliveries));
+    expect(shares.every((d) => d > 0)).toBe(true);
+    // $3.00 plus its tax at the order's 8.3%.
+    expect(shares.reduce((a, d) => a + d, 0)).toBe(325);
+  });
+
+  test("shipping larger than the coupon doesn't hide it", () => {
+    // As if the order had $5.99 shipping: the pre-tax adjustments now net to +$2.99.
+    const doc = loadPage(threeDeliveries);
+    const leaves = [...doc.querySelectorAll('[data-component="chargeSummary"] span')];
+    const at = (t: string) => leaves.find((e) => e.textContent.trim() === t);
+    const shipping = at("$0.00");
+    const beforeTax = at("$142.77");
+    if (!shipping || !beforeTax) throw new Error("fixture summary changed");
+    shipping.textContent = "$5.99";
+    beforeTax.textContent = "$148.76";
+    const shares = discounts(doc);
+    expect(shares.every((d) => d > 0)).toBe(true);
+    const total = shares.reduce((a, d) => a + d, 0);
+    expect(total).toBeGreaterThanOrEqual(300);
+    expect(total).toBeLessThanOrEqual(330);
+  });
+});
+
 describe("an order paid with a gift card and a card", () => {
   test("reads the gift card as a credit against one delivery", () => {
     const { order } = read(giftCard);

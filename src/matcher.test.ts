@@ -112,6 +112,78 @@ describe("matching charges to deliveries", () => {
         [0, 1],
       ]);
     });
+
+    test("a charge only part of the coupon's share over its estimate doesn't fit on its own", () => {
+      // $0.80 over and $0.80 under: a coupon goes wholly to one delivery or the other, so this
+      // is one charge for both deliveries, not two.
+      const { solution } = solve(withCoupon, charges(1080, 1820), 0);
+      expect(landed(solution, 2)).toEqual([
+        [0, 1],
+        [0, 1],
+      ]);
+    });
+
+    test("deliveries a few cents apart aren't swapped to explain the gap as a coupon", () => {
+      const { solution } = solve(
+        [
+          { ...delivery(1000), discount: 100 },
+          { ...delivery(1020), discount: 100 },
+        ],
+        charges(1002, 1018),
+        0,
+      );
+      expect(landed(solution, 2)).toEqual([[0], [1]]);
+    });
+
+    test("a coupon spread over every item leaves the points split between the deliveries", () => {
+      const { solution } = solve(
+        [
+          { ...delivery(2000), discount: 200 },
+          { ...delivery(1900), discount: 200 },
+        ],
+        charges(1950, 1550),
+        400,
+      );
+      expect(landed(solution, 2)).toEqual([[0], [1]]);
+      expect(absorbed(solution, 2)).toEqual([50, 350]);
+    });
+
+    test("the delivery that got the coupon tells it apart from the points it absorbed", () => {
+      // $1.00 under from the coupon, $3.00 under from points.
+      const { solution } = solve(withCoupon, charges(1100, 1500), 300);
+      expect(landed(solution, 2)).toEqual([[0], [1]]);
+      expect(absorbed(solution, 2)).toEqual([0, 400]);
+      expect(solution?.couponBy).toEqual([0, 100]);
+    });
+
+    test("on generated coupon orders, a match it is sure of is never wrong", () => {
+      // 2-4 deliveries with a coupon either spread over every item or given to one delivery,
+      // and each charge a few cents off. Charge j paid delivery j.
+      const r = rng(11);
+      let right = 0;
+      const runs = 600;
+      for (let run = 0; run < runs; run++) {
+        const prices = Array.from({ length: r(2, 4) }, () => r(800, 6000));
+        const spread = r(0, 1) === 0;
+        const coupon = r(100, 600);
+        const sum = prices.reduce((a, p) => a + p, 0);
+        const deliveries = prices.map((p) => {
+          const share = Math.round((coupon * p) / sum);
+          return { ...delivery(p - share), discount: share };
+        });
+        const got = r(0, prices.length - 1);
+        const paid = spread
+          ? deliveries.map((d) => d.total)
+          : prices.map((p, i) => (i === got ? p - coupon : p));
+        const { solution } = solve(deliveries, charges(...paid.map((a) => a + r(-2, 2))), 0);
+        const on = landed(solution, paid.length);
+        if (on.every((d, j) => d?.length === 1 && d[0] === j)) right++;
+        else if (!solution?.ambiguous)
+          // Not sure is fine (billed together, or flagged); a wrong delivery isn't.
+          for (const [j, d] of on.entries()) if (d?.length === 1) expect(d[0]).toBe(j);
+      }
+      expect(right / runs).toBeGreaterThan(0.95);
+    });
   });
 
   describe("points and gift-card credit", () => {

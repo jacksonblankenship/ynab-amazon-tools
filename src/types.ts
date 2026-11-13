@@ -25,9 +25,9 @@ export interface Shipment extends Omit<ParsedShipment, "items"> {
   items: PricedItem[];
   total: number;
   /**
-   * Discount (coupons, promotions) spread onto this delivery, tax-in. Amazon may have given
-   * all of it to another delivery (an item-specific coupon), so its charges can exceed
-   * `total` by up to this much.
+   * Coupons and promotions spread onto this delivery, tax-in. Amazon may have given all of
+   * it to another delivery (an item-specific coupon), so its charges can exceed `total` by
+   * about this much.
    */
   discount?: number;
 }
@@ -37,6 +37,8 @@ export interface Summary {
   beforeTax: number | null;
   tax: number;
   preTaxAdj: number;
+  /** Coupons and promotions among the pre-tax adjustments, as a positive amount. */
+  discounts: number;
   credits: number;
   grand: number | null;
   lines: [string, number][];
@@ -83,7 +85,13 @@ export interface Solution {
   score: number;
   groups: Group[];
   assign: number[];
+  /** Points/gift-card credit, plus any coupon from couponBy, each group's charges fall short by. */
   absorbedBy: number[];
+  /**
+   * The part of absorbedBy that is a coupon the estimates spread onto other deliveries, which
+   * ran over by that much. Null when several groups fall short, so which one got it is unknown.
+   */
+  couponBy: number[] | null;
   sig: string;
   ambiguous: boolean;
 }

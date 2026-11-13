@@ -58,6 +58,7 @@ export function parseOrder(doc: Document): ParsedOrder {
     beforeTax: null,
     tax: 0,
     preTaxAdj: 0,
+    discounts: 0,
     credits: 0,
     grand: null,
     lines: [],
@@ -73,7 +74,11 @@ export function parseOrder(doc: Document): ParsedOrder {
     else if (/tax/i.test(label)) summary.tax += val;
     else if (/points|gift card|reward/i.test(label)) summary.credits += -val; // paid by non-card balance
     else if (/eligible|refund/i.test(label)) continue;
-    else summary.preTaxAdj += val; // shipping, fees (+) and promotions/coupons (-)
+    else {
+      summary.preTaxAdj += val; // shipping, fees (+) and promotions/coupons (-)
+      // A "Free Shipping" line only cancels the shipping line, so it isn't a coupon.
+      if (val < 0 && !/shipping|delivery/i.test(label)) summary.discounts -= val;
+    }
   }
   // Amazon's own pre-tax total is the most reliable source for shipping/fees/discounts combined.
   if (summary.beforeTax != null && summary.subtotal != null)
@@ -153,14 +158,15 @@ export function priceItems(order: ParsedOrder): {
   }
   const adj = allocateBy(Math.round(s.preTaxAdj * scale), items, (i) => i.ext);
   const tax = allocateBy(Math.round(s.tax * scale), adj, ([i, a]) => i.ext + a);
-  // Keep each priced item with the shipment it came from.
-  // Tax per pre-tax cent, to put a discount's share back with its tax.
+  // The coupons' share of each estimate, tax-in, at the order's tax rate.
   const taxRate =
     sumExt + s.preTaxAdj * scale > 0 ? (s.tax * scale) / (sumExt + s.preTaxAdj * scale) : 0;
-  const priced = tax.map(([[i, a], t]) => ({
+  const discount = allocateBy(Math.round(s.discounts * scale * (1 + taxRate)), items, (i) => i.ext);
+  // Keep each priced item with the shipment it came from.
+  const priced = tax.map(([[i, a], t], k) => ({
     from: i,
     item: { ...i, total: i.ext + a + t },
-    discount: a < 0 ? Math.round(-a * (1 + taxRate)) : 0,
+    discount: discount[k]?.[1] ?? 0,
   }));
   const shipments = order.shipments.map((sh): Shipment => {
     const mine = sh.items.flatMap((i) => priced.filter((p) => p.from === i));

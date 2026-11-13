@@ -20,6 +20,9 @@ export function partitionsByLevel<T>(xs: readonly T[]): T[][][][] {
   return Array.from({ length: n }, (_, l) => all.filter((p) => p.length === n - l));
 }
 
+/** How close (in score, roughly cents) a different match must come to flag a coupon match. */
+const COUPON_MARGIN = 3;
+
 /**
  * Assign each card charge to a delivery (or a group of deliveries Amazon billed together)
  * so that charges + points/gift-card credit reproduce each delivery's estimated total.
@@ -47,7 +50,8 @@ export function solve(
   const levels = indexed.length <= 8 ? partitionsByLevel(indexed) : [[indexed.map((x) => [x])]];
   let budget = 3e6;
   // In an object so TS doesn't narrow `best` to null: it is only assigned inside the closures below.
-  const found: { best: Solution | null } = { best: null };
+  // `coupon`: the best match runs a delivery over its estimate to explain a coupon.
+  const found: { best: Solution | null; coupon: boolean } = { best: null, coupon: false };
 
   for (const parts of levels) {
     for (const members of parts) {
@@ -59,8 +63,7 @@ export function solve(
           total: g.reduce((s, x) => s + x.s.total, 0),
           tol: 2 + g.reduce((s, x) => s + x.s.items.length, 0),
         },
-        // A delivery's charges may run over its estimate by the discount spread onto it, when
-        // Amazon really gave that discount to another delivery (an item-specific coupon).
+        // Spread onto this delivery by the estimates; see Shipment.discount.
         discount: g.reduce((s, x) => s + (x.s.discount ?? 0), 0),
         sig: g.map((x) => x.s.total).join("+"),
         sum: 0,
@@ -90,30 +93,42 @@ export function solve(
             absorbed += r;
             absorbedBy[w.gi] = r;
             absorbing++;
-          } else if (-r <= w.discount + w.group.tol) {
+          } else if (Math.abs(w.discount + r) <= w.group.tol) {
+            // Over by about its share of the coupon: Amazon gave the coupon to another delivery.
+            err += Math.abs(w.discount + r);
             over -= r;
             overrunning++;
           } else return;
         }
-        // A discount another delivery didn't get shows up as that much more absorbed here.
+        // The coupon the overrunning deliveries didn't get is also absorbed by another delivery.
         const net = absorbed - over;
         const aErr = net < lo ? lo - net : net > hi ? net - hi : 0;
         if (aErr > 3 + 2 * (absorbing + overrunning)) return;
-        // An item coupon makes every delivery without it run over, so overruns are weaker
-        // evidence against a match than credit spread over more deliveries.
-        score += err + aErr + absorbing * 0.5 + overrunning * 0.25;
+        // An overrun matching a delivery's coupon share is unlikely by chance, so it costs less than
+        // credit that happens to fit. An item coupon goes to one delivery, so once others run over,
+        // each further delivery falling short is a less likely story and costs more.
+        const extraShort = overrunning ? Math.max(0, absorbing - 1) : 0;
+        score += err + aErr + absorbing * 0.5 + overrunning * 0.25 + extraShort * 5;
         const sig = picked.map((w) => (w ? w.sig : "x")).join("|");
         const best = found.best;
+        // A coupon explanation is a guess about where Amazon applied it, so a different match
+        // nearly as good is a real alternative, not rounding noise.
+        const margin = overrunning || found.coupon ? COUPON_MARGIN : 1e-9;
+        const rival = !!best && sig !== best.sig && best.groups === G;
         if (!best || score < best.score - 1e-9) {
           found.best = {
             score,
             groups: G,
             assign: picked.map((w) => (w ? w.gi : -1)),
             absorbedBy,
+            // With several deliveries falling short, which one took the coupon is unknown.
+            couponBy:
+              over && absorbing > 1 ? null : absorbedBy.map((a) => (a > 0 ? Math.min(a, over) : 0)),
             sig,
-            ambiguous: false,
+            ambiguous: rival && best.score - score < margin,
           };
-        } else if (Math.abs(score - best.score) < 1e-9 && sig !== best.sig && best.groups === G) {
+          found.coupon = overrunning > 0;
+        } else if (rival && score - best.score < margin) {
           best.ambiguous = true;
         }
       };
