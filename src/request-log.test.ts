@@ -1,7 +1,7 @@
 // Also proves the "$" stub wiring: source code's GM_* calls land in test/gm.ts.
-import { expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { gm } from "../test/gm.ts";
-import { logRequest, requestLog } from "./request-log.ts";
+import { isRefusal, logRequest, requestLog, requestLogPanel } from "./request-log.ts";
 
 test("an empty store gives an empty log", () => {
   expect(requestLog()).toEqual([]);
@@ -36,4 +36,58 @@ test("keeps only the newest 300 entries", () => {
 
 test("storage starts empty in every test", () => {
   expect(gm.get("acs-requests")).toBeUndefined();
+});
+
+test.each([
+  [429, true],
+  [503, true],
+  [500, true],
+  [200, false],
+  [404, false],
+  ["not sent: offline", false],
+  ["429, not accepted", false],
+])("status %s counts as Amazon holding back: %s", (status, refused) => {
+  expect(isRefusal({ at: 0, how: "api", status })).toBe(refused);
+});
+
+describe("the request log panel", () => {
+  const NOW = new Date(2026, 10, 13, 12).getTime();
+  const HOUR = 36e5;
+  beforeEach(() => {
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+  const panelText = () => document.querySelector(".acs-result")?.textContent ?? "";
+
+  test("tallies the last hour and day, and says when Amazon last refused", () => {
+    gm.seed("acs-requests", [
+      { at: NOW - 48 * HOUR, how: "api", status: 503 },
+      { at: NOW - 3 * HOUR, how: "scroll", status: 200 },
+      { at: NOW - 0.5 * HOUR, how: "api", status: 429 },
+      { at: NOW - 0.2 * HOUR, how: "api", status: 200 },
+    ]);
+    requestLogPanel();
+    const text = panelText();
+    expect(text).toContain("loads of older transactions in the last 24 hours");
+    expect(document.querySelector(".acs-r-num")?.textContent).toBe("3");
+    expect(text).toContain("Last hour: 1 answered, 1 refused.");
+    expect(text).toContain("Last 24 hours: 2 answered, 1 refused.");
+    expect(text).toContain("Last refusal:");
+    expect(document.querySelectorAll("tr")).toHaveLength(4);
+    expect(text).toContain("refused");
+  });
+
+  test("an empty log says nothing has happened yet", () => {
+    requestLogPanel();
+    expect(panelText()).toContain("Nothing yet.");
+    expect(panelText()).toContain("No refusals logged.");
+  });
+
+  test("opening it again replaces the panel rather than stacking another", () => {
+    requestLogPanel();
+    requestLogPanel();
+    expect(document.querySelectorAll(".acs-result")).toHaveLength(1);
+  });
 });
