@@ -1,7 +1,9 @@
 // ==UserScript==
 // @name         Amazon Charge Finder for YNAB
 // @namespace    amazon-charge-finder-ynab
+// x-release-please-start-version
 // @version      2.0.1
+// x-release-please-end
 // @description  Shows which Amazon card charge paid for which items, so you can categorize or split it in YNAB. Hover an Amazon transaction in YNAB and click the search icon to jump straight to that charge's items. For a refund, it traces the original charge back to its YNAB category.
 // @license      MIT
 // @match        https://www.amazon.com/your-orders/order-details*
