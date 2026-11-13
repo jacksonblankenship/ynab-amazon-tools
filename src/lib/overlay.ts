@@ -2,7 +2,7 @@
 // taken so far and survives page loads: its state is kept in sessionStorage and picked up
 // again by the next page, which redraws it without replaying the entrance animation.
 import { $, el } from "./dom.ts";
-import { disclosure, reducedMotion, type Suite } from "./suite.ts";
+import { disclosure, reducedMotion, reportLink, type Suite } from "./suite.ts";
 
 /** How long a saved overlay stays resumable after the last update. */
 const RESUME_MS = 120000;
@@ -240,9 +240,15 @@ export function makeOverlay(suite: Suite, opts: { timeoutMs?: number; onEnd?: ()
   }
   /**
    * Stop and explain; the user closes it. `finished` marks the last step done (the search
-   * ran to the end) rather than missed.
+   * ran to the end) rather than missed. `report` adds a link to report it, for when the
+   * site's page couldn't be read.
    */
-  function overlayStop(title: string, sub = "", choices: Choice[] = [], { finished = false } = {}) {
+  function overlayStop(
+    title: string,
+    sub = "",
+    choices: Choice[] = [],
+    { finished = false, report = false } = {},
+  ) {
     const v = parts();
     clearTimeout(timer);
     const last = v.state.steps.at(-1);
@@ -251,6 +257,8 @@ export function makeOverlay(suite: Suite, opts: { timeoutMs?: number; onEnd?: ()
     v.o.classList.add(`${p}-stopped`);
     setTitle(v.msg, v.state, title);
     v.sub.textContent = sub;
+    const link = report && reportLink(suite);
+    if (link) v.sub.append(" ", link);
     v.extra.replaceChildren(
       ...choices.map((c) => {
         const a = el("a", `${p}-choice`);

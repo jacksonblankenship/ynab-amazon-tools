@@ -10,6 +10,8 @@ export default defineConfig({
       userscript: {
         name: "Amazon Charge Finder for YNAB",
         namespace: "amazon-charge-finder-ynab",
+        homepageURL: "https://github.com/jacksonblankenship/ynab-amazon-tools",
+        supportURL: "https://github.com/jacksonblankenship/ynab-amazon-tools/issues",
         description:
           "Shows which Amazon card charge paid for which items, so you can categorize or split it in YNAB. Hover an Amazon transaction in YNAB and click the search icon to jump straight to that charge's items. For a refund, it traces the original charge back to its YNAB category.",
         match: [

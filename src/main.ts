@@ -27,7 +27,8 @@ declare global {
   // error would otherwise leave no results and no explanation.
   const fail = (e: unknown) => {
     console.error("[Amazon Charge Finder]", e);
-    overlayStop("Something went wrong", errMsg(e));
+    // Usually a bug or a page this script can no longer read, either way worth reporting.
+    overlayStop("Something went wrong", errMsg(e), [], { report: true });
   };
   // Runs at document-start so the loading overlay covers the page before it paints.
   const onTransactions = location.pathname.startsWith("/cpe/yourpayments/transactions");

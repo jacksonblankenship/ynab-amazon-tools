@@ -98,6 +98,8 @@ export interface RenderResult {
   solution: Solution | null;
   warnings: string[];
   error: string | null;
+  /** Part of Amazon's page couldn't be read: say so, with a way to report it. */
+  changed: boolean;
 }
 
 export interface Focus {

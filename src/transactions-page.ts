@@ -178,10 +178,13 @@ export async function transactionsPage() {
     const oldest = days.length ? Math.min(...days) : null;
     return target != null && oldest != null && oldest < target - 14;
   };
-  const stop = (title: string, sub: string, finished = false) => {
+  const stop = (title: string, sub: string, finished = false, report = false) => {
     save(null);
-    overlayStop(title, sub, [], { finished });
+    overlayStop(title, sub, [], { finished, report });
   };
+  // Amazon's page wasn't in a shape this script can read: offer a way to report it.
+  const unreadable = (title: string) =>
+    stop(title, "Amazon may have changed its layout. Close this and look manually.", false, true);
   const notFound = (why: string) =>
     stop(
       `No ${fmt(query.amount)} ${kindName} found`,
@@ -229,16 +232,10 @@ export async function transactionsPage() {
   }
   let rows = parseTransactions(document, null);
   if (!rows.length && /order\s*#\s*\d{3}-\d{7}-\d{7}/i.test(document.body.textContent))
-    return stop(
-      "Couldn't read Amazon's transactions page",
-      "Amazon may have changed its layout. Close this and look manually.",
-    );
+    return unreadable("Couldn't read Amazon's transactions page");
   // Without dates the two-week window can't work, and any old charge of the same amount would match.
   if (rows.length && rows.every((r) => !toDay(r.date)))
-    return stop(
-      "Couldn't read the dates on Amazon's transactions page",
-      "Amazon may have changed its layout. Close this and look manually.",
-    );
+    return unreadable("Couldn't read the dates on Amazon's transactions page");
 
   // 1. The rows that come with the page cost nothing, nor do ones seen on earlier searches.
   // Later numbered pages (old layout) don't start from the top, so they don't count as a sweep.

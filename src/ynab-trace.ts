@@ -12,6 +12,7 @@ import { $$, el, esc, line } from "./lib/dom.ts";
 import { errMsg } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
 import { resultPanel } from "./lib/result-panel.ts";
+import { reportLine } from "./lib/suite.ts";
 import { suite } from "./overlay.ts";
 import { refundHint, TRACE_KEY } from "./refund.ts";
 import { short } from "./render.ts";
@@ -236,8 +237,10 @@ async function fillTrace(body: HTMLElement, t: Trace): Promise<void> {
       line("acs-warn", "YNAB is limiting requests (it allows 200 an hour). Try again later."),
     );
   const txns = transactionsIn(res.body);
-  if (res.status !== 200 || !txns)
+  if (res.status !== 200)
     return say(line("acs-warn", `YNAB answered with an error (${res.status}).`));
+  // A good answer in a shape this script doesn't know: YNAB changed its API.
+  if (!txns) return say(reportLine(suite, "acs-warn", "Couldn't read YNAB's answer."));
   const found = t.charges.map((c) => describeMatch(c, findCharges(txns, c), t, plan));
   say(
     line(

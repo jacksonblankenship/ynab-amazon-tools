@@ -1,7 +1,7 @@
 // Order details page: parse, fetch the order's charges, match them, and show the result.
 import { GM_setValue } from "$";
 import { $, $$ } from "./lib/dom.ts";
-import { errMsg } from "./lib/errors.ts";
+import { errMsg, PageChanged } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
 import { solve } from "./matcher.ts";
 import { parseOrder, priceItems } from "./order.ts";
@@ -21,12 +21,16 @@ const card = (box: Element) => {
 export async function orderPage() {
   if (!$('[data-component="shipments"] [data-component="purchasedItems"]')) {
     if (focusTarget())
-      overlayStop("Couldn't read this order page", "Amazon may have changed its layout.");
+      overlayStop("Couldn't read this order page", "Amazon may have changed its layout.", [], {
+        report: true,
+      });
     return;
   }
   const focus = focusTarget();
   if (focus) overlayFound(`Found ${fmt(focus.amount)}`, "Finding the items it paid for");
-  const { order, warnings } = priceItems(parseOrder(document));
+  const priced = priceItems(parseOrder(document));
+  const { order, warnings } = priced;
+  let { changed } = priced;
   const search = signal();
   let txns: Txn[] = [];
   let error: string | null = null;
@@ -36,10 +40,12 @@ export async function orderPage() {
       remember(txns);
     } catch (e: unknown) {
       error = errMsg(e);
+      if (e instanceof PageChanged) changed = true;
     }
   } else {
     // Without it the lookup would ask Amazon for order "null" and report a misleading result.
     error = "Couldn't find the order number on this page";
+    changed = true;
   }
   // Cancelled while the charges loaded: leave the page as it is.
   if (focus && search.aborted) return;
@@ -61,7 +67,8 @@ export async function orderPage() {
       "Some charges didn't match a delivery cleanly (item-specific coupons or a partial refund can cause this). Unmatched amounts are flagged.",
     );
   }
-  const shown = focus && solution && renderFocus(order, charges, solution, focus, warnings);
+  const shown =
+    focus && solution && renderFocus(order, charges, solution, focus, warnings, changed);
   if (shown) {
     const cards = shown.boxes.map(card);
     const top = Math.min(...cards.map((c) => c.getBoundingClientRect().top));
@@ -71,7 +78,7 @@ export async function orderPage() {
     });
     return;
   }
-  render(order, { charges, credits, refunds, solution, warnings, error });
+  render(order, { charges, credits, refunds, solution, warnings, error, changed });
   // Opened from a YNAB refund: show it, and hand its trace to the YNAB tab.
   const sameRefunds = focus && !error ? refunds.filter((r) => r.amount === focus.amount) : [];
   const refund = sameRefunds.find((r) => r.date === focus?.date) ?? sameRefunds[0];
@@ -91,6 +98,8 @@ export async function orderPage() {
     overlayStop(
       error ? "Couldn't read Amazon's charges" : `Couldn't tie ${fmt(focus.amount)} to a delivery`,
       `${error ? `${error}. ` : ""}Showing the full breakdown for this order instead.`,
+      [],
+      { report: changed },
     );
   }
 }

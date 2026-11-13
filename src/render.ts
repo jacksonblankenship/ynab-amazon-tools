@@ -1,12 +1,14 @@
 // Order page UI: the per-delivery banners, the order-level panel, and the single-charge view.
 import { $, $$, el, esc } from "./lib/dom.ts";
-import { must } from "./lib/errors.ts";
+import { must, PageChanged } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
 import { resultPanel } from "./lib/result-panel.ts";
-import { disclosure } from "./lib/suite.ts";
+import { disclosure, reportLine } from "./lib/suite.ts";
 import { splitGroup } from "./matcher.ts";
 import { suite } from "./overlay.ts";
 import type { Focus, Order, RenderResult, Solution, Split, Txn } from "./types.ts";
+
+const CHANGED = "Amazon may have changed this page.";
 
 export const short = (t: string) =>
   t.length > 70 ? `${t.slice(0, 70).replace(/\s+\S*$/, "")}…` : t;
@@ -42,12 +44,14 @@ export function render(order: Order, result: RenderResult) {
   const anchor = $('[data-component="shipments"]');
   const anchorParent = anchor?.parentNode;
   if (!anchor || !anchorParent)
-    throw new Error("Couldn't find where to show the results. Amazon may have changed this page.");
+    throw new PageChanged(
+      "Couldn't find where to show the results. Amazon may have changed this page.",
+    );
   $$(".acs-panel,.acs-banner,.acs-result").forEach((e) => {
     e.remove();
   });
   const { shipments } = order;
-  const { charges, credits, refunds, solution, warnings, error } = result;
+  const { charges, credits, refunds, solution, warnings, error, changed } = result;
   const dn = (i: number) => `Delivery ${i + 1}`;
 
   // Per-shipment banners
@@ -178,6 +182,7 @@ export function render(order: Order, result: RenderResult) {
   warnings.forEach((w) => {
     p.appendChild(el("div", "acs-warn", esc(w)));
   });
+  if (changed) p.appendChild(reportLine(suite, "acs-warn", CHANGED));
   if (order.orderId) {
     p.appendChild(
       el(
@@ -201,6 +206,7 @@ export function renderFocus(
   solution: Solution,
   focus: Focus,
   warnings: string[] = [],
+  changed = false,
 ): { panel: HTMLElement; boxes: Element[] } | null {
   const matched = charges.flatMap((c, j) => {
     const gi = solution.assign[j];
@@ -249,6 +255,7 @@ export function renderFocus(
   warnings.forEach((w) => {
     body.push(el("div", "acs-warn", esc(w)));
   });
+  if (changed) body.push(reportLine(suite, "acs-warn", CHANGED));
   const panel = resultPanel(suite, {
     amount: fmt(c.amount),
     meta: `${c.date} · ${c.method} · ${dn}`,

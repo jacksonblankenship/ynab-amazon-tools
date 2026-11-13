@@ -118,6 +118,8 @@ function summaryRows(doc: Document): [string, number][] {
 export function priceItems(order: ParsedOrder): {
   order: Order;
   warnings: string[];
+  /** Part of the page couldn't be read, so Amazon may have changed it. */
+  changed: boolean;
 } {
   const items = order.shipments.flatMap((s) => s.items);
   const sumExt = items.reduce((a, i) => a + i.ext, 0);
@@ -125,9 +127,7 @@ export function priceItems(order: ParsedOrder): {
   const warnings: string[] = [];
   const unpriced = items.filter((i) => !i.price).length;
   if (unpriced)
-    warnings.push(
-      `Couldn't read the price of ${unpriced} item${unpriced > 1 ? "s" : ""}. Amazon may have changed this page.`,
-    );
+    warnings.push(`Couldn't read the price of ${unpriced} item${unpriced > 1 ? "s" : ""}.`);
   if (s.subtotal == null || s.grand == null)
     warnings.push(
       "Couldn't read the Order Summary, so tax and shipping aren't included in the estimates.",
@@ -150,5 +150,6 @@ export function priceItems(order: ParsedOrder): {
     const its = sh.items.flatMap((i) => priced.filter((p) => p.from === i).map((p) => p.item));
     return { ...sh, items: its, total: its.reduce((a, i) => a + i.total, 0) };
   });
-  return { order: { ...order, shipments }, warnings };
+  const changed = unpriced > 0 || s.subtotal == null || s.grand == null;
+  return { order: { ...order, shipments }, warnings, changed };
 }

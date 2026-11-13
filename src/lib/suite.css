@@ -315,6 +315,13 @@
   font-weight: 400;
   color: #51504d;
 }
+a.pfx-report {
+  /* biome-ignore lint/complexity/noImportantStyles: has to beat the host page's own link styles */
+  color: #475afa !important;
+  /* biome-ignore lint/complexity/noImportantStyles: has to beat the host page's own link styles */
+  text-decoration: underline !important;
+  font-weight: 600;
+}
 #pfx-overlay button.pfx-close {
   align-self: center;
   margin: 4px 0 0;

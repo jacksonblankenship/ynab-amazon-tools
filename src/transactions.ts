@@ -1,6 +1,6 @@
 // Amazon transactions page: read the payment rows for an order (or for every order shown).
 import { txt } from "./lib/dom.ts";
-import { must } from "./lib/errors.ts";
+import { must, PageChanged } from "./lib/errors.ts";
 import { cents } from "./lib/money.ts";
 import { DATE_RE, leaves, MASK_RE, moneyIn, ORDER_RE, STATUS_RE } from "./scrape.ts";
 import type { Txn } from "./types.ts";
@@ -12,7 +12,7 @@ export async function fetchTransactions(orderId: string): Promise<Txn[]> {
   const html = await res.text();
   const rows = parseTransactions(new DOMParser().parseFromString(html, "text/html"), orderId);
   if (!rows.length && html.includes(orderId))
-    throw new Error("Amazon's transactions page changed and couldn't be read");
+    throw new PageChanged("Amazon's transactions page changed and couldn't be read");
   return rows;
 }
 
