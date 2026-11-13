@@ -8,6 +8,7 @@ import { focusTarget, orderPage } from "./order-page.ts";
 import { FIND_KEY, overlayStart, overlayStop, suite } from "./overlay.ts";
 import { requestLogPanel } from "./request-log.ts";
 import { transactionsPage } from "./transactions-page.ts";
+import { forgetTxns } from "./txn-cache.ts";
 import { ynabPage } from "./ynab-page.ts";
 import { ynabTrace } from "./ynab-trace.ts";
 
@@ -33,6 +34,8 @@ declare global {
   if (location.hostname !== "app.ynab.com") {
     try {
       GM_registerMenuCommand("Amazon request log", () => ready(requestLogPanel));
+      // If a search says "already checked" for something that is there, start over.
+      GM_registerMenuCommand("Forget saved Amazon transactions", forgetTxns);
     } catch {
       /* no menu in this userscript manager */
     }

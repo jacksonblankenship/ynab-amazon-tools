@@ -9,6 +9,7 @@ import { overlayDone, overlayFound, overlayStop, signal } from "./overlay.ts";
 import { refundPanel, TRACE_KEY, traceRefund } from "./refund.ts";
 import { render, renderFocus } from "./render.ts";
 import { fetchTransactions } from "./transactions.ts";
+import { remember } from "./txn-cache.ts";
 import type { Focus, Txn } from "./types.ts";
 
 /** The delivery's whole card on the page, to highlight; the box itself if it has none of its own. */
@@ -32,6 +33,7 @@ export async function orderPage() {
   if (order.orderId) {
     try {
       txns = await fetchTransactions(order.orderId);
+      remember(txns);
     } catch (e: unknown) {
       error = errMsg(e);
     }

@@ -10,6 +10,7 @@ import { FIND_KEY, overlay, overlayFound, overlayStop, signal } from "./overlay.
 import { logRequest, requestLog } from "./request-log.ts";
 import { leaves } from "./scrape.ts";
 import { parseTransactions, transactionRows } from "./transactions.ts";
+import { cachedTxns, isCovered, remember, rememberSweep, sweptSpan } from "./txn-cache.ts";
 import type { FindQuery, Txn } from "./types.ts";
 
 export function isFindQuery(v: unknown): v is FindQuery {
@@ -240,10 +241,25 @@ export async function transactionsPage() {
       "Amazon may have changed its layout. Close this and look manually.",
     );
 
-  // 1. The rows that come with the page cost nothing.
+  // 1. The rows that come with the page cost nothing, nor do ones seen on earlier searches.
+  // Later numbered pages (old layout) don't start from the top, so they don't count as a sweep.
+  remember(rows);
+  const fromTop = !query.pages;
+  const fresh = fromTop ? sweptSpan(rows, false) : null;
+  rememberSweep("all", fresh);
   let hits = findHits(rows);
+  if (!hits.length) hits = findHits(cachedTxns());
   if (hits.length) return open(hits);
   if (isPast(rows)) return notFound("Searched back past that date.");
+  // Every transaction within two weeks of the date was seen before, so asking again can't find it.
+  const lists: ("all" | "refunds")[] = query.kind === "refund" ? ["all", "refunds"] : ["all"];
+  if (
+    targets.length &&
+    isCovered(lists, Math.min(...targets) - 14, Math.max(...targets) + 14, fresh)
+  )
+    return notFound(
+      "Your transactions around that date were already checked on an earlier search.",
+    );
 
   // Older rows cost requests from the allowance; don't spend one inside a recent refusal.
   const refusedAt =
@@ -262,11 +278,22 @@ export async function transactionsPage() {
   }
 
   // 2. Ask the transaction service directly.
+  let apiSeen: Txn[] = [];
   const api = await apiSearch(
     query,
-    (seen) => ({ hits: findHits(seen), past: isPast(seen) }),
+    (seen) => {
+      apiSeen = seen;
+      remember(seen);
+      return { hits: findHits(seen), past: isPast(seen) };
+    },
     search,
   );
+  if (!("unusable" in api) && fromTop) {
+    // The refunds-only list starts from its top; the full one carries on below the page's rows.
+    const end = "done" in api && !api.past && !api.limit;
+    if (query.kind === "refund") rememberSweep("refunds", sweptSpan(apiSeen, end));
+    else rememberSweep("all", sweptSpan([...rows, ...apiSeen], end));
+  }
   if (search.aborted || "aborted" in api) return;
   if ("hits" in api) return open(api.hits);
   if ("throttled" in api) return refusedNow(rows.length + api.checked);
@@ -282,9 +309,15 @@ export async function transactionsPage() {
   // 3. The service didn't answer the way it did when this was written: fall back to scrolling the page.
   let past = false;
   let stalled = false;
+  // Rows can finish arriving alongside a refusal, so keep them whatever the load's outcome.
+  const keepRows = () => {
+    rows = parseTransactions(document, null);
+    remember(rows);
+    if (fromTop) rememberSweep("all", sweptSpan(rows, false));
+  };
   for (;;) {
     if (search.aborted) return;
-    rows = parseTransactions(document, null);
+    keepRows();
     hits = findHits(rows);
     if (hits.length) return open(hits);
     past = isPast(rows);
@@ -308,7 +341,10 @@ export async function transactionsPage() {
     // No retry: Amazon's limit lasts an hour or more, and asking again inside it only extends it.
     const got = await loadMoreTransactions(transactionRows(document.body), search);
     if (got !== "end") logRequest("scroll", got === "failed" ? 429 : 200);
-    if (got === "failed") return refusedNow(transactionRows(document.body).length);
+    if (got === "failed") {
+      keepRows();
+      return refusedNow(transactionRows(document.body).length);
+    }
     if (got === "end") {
       stalled = true;
       break;
