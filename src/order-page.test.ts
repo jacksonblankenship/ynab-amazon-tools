@@ -193,3 +193,25 @@ describe("saving what a YNAB line paid for", () => {
     expect(gm.get("acs-answers-v1")).toBeUndefined();
   });
 });
+
+describe("when Amazon's charges don't load", () => {
+  test("one warning says so, and no delivery claims it has no charge yet", async () => {
+    loadPage(shared);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("", { status: 404 })),
+    );
+    vi.stubGlobal("scrollTo", () => {});
+    history.replaceState(
+      null,
+      "",
+      "/your-orders/order-details?orderID=114-7767348-8987501#acs-charge=23652&acs-on=September%2010%2C%202026",
+    );
+    await orderPage();
+    const panel = document.querySelector(".acs-result");
+    const warnings = [...(panel?.querySelectorAll(".acs-warn") ?? [])].map((w) => w.textContent);
+    expect(warnings.filter((w) => /charges/i.test(w ?? ""))).toHaveLength(1);
+    expect(warnings.join(" ")).toMatch(/Couldn't load this order's charges \(.*404\)/);
+    expect(panel?.textContent).not.toMatch(/No card charge/);
+  });
+});

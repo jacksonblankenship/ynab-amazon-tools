@@ -272,11 +272,14 @@ export function renderOrder(order: Order, result: RenderResult, lead: Node[] = [
   });
   shipments.forEach((sh, i) => {
     if (charged.has(i)) return;
+    // Without the charges, whether this delivery has one is unknown: only the estimate.
     const nodes: Node[] = [
       el(
         "div",
         "acs-muted",
-        `No card charge yet${charges.length ? ", or paid with points or a gift card" : ""}. Estimated ${fmt(sh.total)} with tax.`,
+        error
+          ? `Estimated ${fmt(sh.total)} with tax.`
+          : `No card charge yet${charges.length ? ", or paid with points or a gift card" : ""}. Estimated ${fmt(sh.total)} with tax.`,
       ),
     ];
     for (const split of splitGroup(sh.items, [{ amount: sh.total }], 0))

@@ -132,19 +132,19 @@ async function match(parsed: ParsedOrder, focus: Focus | null): Promise<Shown> {
     const trace = traceRefund(order, charges, refund);
     return { panel: refundPanel(trace), boxes: [], landed: () => {}, trace };
   }
-  // The one asked about couldn't be pinned down: say so above the whole order.
-  const lead = focus
-    ? [
-        line(
-          "acs-warn",
-          error
-            ? "Couldn't read Amazon's charges for this order."
-            : focus.kind === "refund"
+  // The one asked about couldn't be pinned down: say so above the whole order. When the
+  // charges didn't load, the whole order's own warning already says why.
+  const lead =
+    focus && !error
+      ? [
+          line(
+            "acs-warn",
+            focus.kind === "refund"
               ? `Couldn't find the ${fmt(focus.amount)} refund on this order. Here's the whole order instead.`
               : `Couldn't tie ${fmt(focus.amount)} to a delivery. Here's the whole order instead.`,
-        ),
-      ]
-    : [];
+          ),
+        ]
+      : [];
   return renderOrder(
     order,
     { charges, credits, refunds, solution, warnings, error, changed },
