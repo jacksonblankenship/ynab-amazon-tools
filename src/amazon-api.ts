@@ -116,6 +116,21 @@ function apiRow(t: ApiTxn): Txn | null {
   };
 }
 
+/**
+ * The transactions the page arrived with, from its startup data: the same rows the service
+ * returns, read as data rather than from the page's layout. Null if they aren't there or
+ * can't be read, so the caller falls back to the rows on screen.
+ */
+export function pageRows(): Txn[] | null {
+  const list = findKey(pageProps()?.state?.transactionResponseState, /^transactions?List$/);
+  if (!Array.isArray(list) || !list.length) return null;
+  const rows = list.flatMap((t: ApiTxn) => {
+    const row = apiRow(t);
+    return row ? [row] : [];
+  });
+  return rows.length ? rows : null;
+}
+
 function apiBody(
   props: PageProps,
   ctx: RequestContext,

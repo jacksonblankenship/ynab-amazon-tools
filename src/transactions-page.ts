@@ -1,5 +1,5 @@
 // Amazon transactions page: find a charge or refund sent over from YNAB.
-import { apiSearch, pace } from "./amazon-api.ts";
+import { apiSearch, pace, pageRows } from "./amazon-api.ts";
 import { readableDates, toDay } from "./dates.ts";
 import { $, $$, txt } from "./lib/dom.ts";
 import { must } from "./lib/errors.ts";
@@ -241,7 +241,13 @@ export async function transactionsPage() {
     );
   };
 
-  if (!(await until(() => parseTransactions(document, null).length > 0, 8000, search))) {
+  // The page's own data first; its layout only when that's missing (an older page, or a later
+  // numbered page of one).
+  const fromData = query.pages ? null : pageRows();
+  if (
+    !fromData &&
+    !(await until(() => parseTransactions(document, null).length > 0, 8000, search))
+  ) {
     if (search.aborted) return;
     // Orders on show but no rows read is the page's layout, not Amazon holding back.
     if (rowsUnreadable(document.body))
@@ -249,7 +255,7 @@ export async function transactionsPage() {
     stop("Amazon didn't show any transactions", THROTTLED);
     return;
   }
-  let rows = parseTransactions(document, null);
+  let rows = fromData ?? parseTransactions(document, null);
   // Every charge would read as a gift card or points payment and never match.
   if (query.kind === "charge" && cardsUnreadable(rows))
     return unreadable("Couldn't read the cards on Amazon's transactions page");
