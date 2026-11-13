@@ -214,6 +214,18 @@ describe("which days have been seen in full", () => {
     expect(isCovered(["all"], day("Oct 20, 2026"), day("Nov 01, 2026"), null)).toBe(false);
   });
 
+  test("sweeps on back-to-back days vouch together for a span crossing both", () => {
+    rememberSweep("all", [day("Oct 01, 2026"), day("Oct 15, 2026")]);
+    rememberSweep("all", [day("Oct 16, 2026"), day("Nov 01, 2026")]);
+    expect(isCovered(["all"], day("Oct 10, 2026"), day("Oct 20, 2026"), null)).toBe(true);
+  });
+
+  test("a day between two sweeps leaves a gap neither vouches for", () => {
+    rememberSweep("all", [day("Oct 01, 2026"), day("Oct 14, 2026")]);
+    rememberSweep("all", [day("Oct 16, 2026"), day("Nov 01, 2026")]);
+    expect(isCovered(["all"], day("Oct 10, 2026"), day("Oct 20, 2026"), null)).toBe(false);
+  });
+
   test("the refunds-only list vouches only for refunds", () => {
     rememberSweep("refunds", [day("Oct 01, 2026"), day("Nov 01, 2026")]);
     expect(isCovered(["all", "refunds"], day("Oct 10, 2026"), day("Oct 12, 2026"), null)).toBe(

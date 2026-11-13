@@ -385,6 +385,10 @@ describe("searching Amazon's transaction service", () => {
       ["an answer without a transaction list", { status: 200, body: { something: [] } }],
       ["rows it can't read", answer([{ amount: 5 }], "page-2-key")],
       [
+        "card rows without an order number",
+        answer([txn({ amount: "-$9.99", orders: [] })], "page-2-key"),
+      ],
+      [
         "rows without card digits",
         answer([txn({ amount: "-$9.99", card: { name: "Visa" } })], "page-2-key"),
       ],
