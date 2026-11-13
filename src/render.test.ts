@@ -108,6 +108,14 @@ describe("the single-charge panel", () => {
     expect(shown?.boxes).toEqual([o.shipments[1]?.box]);
   });
 
+  test("its date is YNAB's when the YNAB line is known", () => {
+    const { order: o, solve } = order([[diapers, wipes]], 0);
+    const charges = [charge(2732, "January 4, 2026")];
+    const row = { amount: 2732, kind: "charge" as const, date: "2026-01-06" };
+    const panel = renderFocus(o, charges, solve(charges), { ...focus, row })?.panel;
+    expect(panel?.querySelector(".acs-r-meta")?.textContent).toBe("January 6, 2026");
+  });
+
   test("one item is named outright, with no table or total", () => {
     const { order: o, solve } = order([[item("Huggies Size 3 Diapers", 2732)]], 0);
     const charges = [charge(2732, "January 4, 2026")];
@@ -272,7 +280,8 @@ describe("copying amounts for a split", () => {
     const written = clipboard();
     button(panel(), /memo/i).click();
     await vi.waitFor(() => {
-      expect(written).toEqual(["Huggies Size 3 Diapers, Clorox Wipes, 3 pack"]);
+      // Titles hold commas of their own, so a semicolon tells the items apart.
+      expect(written).toEqual(["Huggies Size 3 Diapers; Clorox Wipes, 3 pack"]);
     });
   });
 
@@ -358,6 +367,12 @@ describe('"How it matched" and the refund answer\'s look', () => {
     const summary = css.match(/^\.acs-how summary \{([^}]*)\}/m)?.[1] ?? "";
     expect(summary).toMatch(/color: #51504d/);
     expect(summary).not.toMatch(/font-weight/);
+  });
+
+  test("a highlighted split line isn't drawn in link blue", () => {
+    const hit = css.match(/^\.acs-split tr\.acs-hit td \{([^}]*)\}/m)?.[1] ?? "";
+    expect(hit).not.toBe("");
+    expect(hit).not.toMatch(/color: #(3a40d9|475afa)/);
   });
 
   test("a refund's waiting or error line isn't drawn in the answer's large bold", () => {

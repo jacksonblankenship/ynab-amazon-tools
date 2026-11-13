@@ -1,6 +1,6 @@
 // Order page UI, floating over Amazon's page rather than written into it: the single-charge
 // view, and the whole order's breakdown. Amazon's own deliveries are only outlined from above.
-import { nearest } from "./dates.ts";
+import { nearest, readableDates } from "./dates.ts";
 import { $$, el, esc, line } from "./lib/dom.ts";
 import { must } from "./lib/errors.ts";
 import { clearTop, type Highlight, highlight } from "./lib/highlight.ts";
@@ -152,6 +152,13 @@ function paidLess(solution: Solution, gi: number, single = false): string {
     ? `The card paid ${fmt(absorbed)} less than the item's price; that came from ${from}.`
     : `Amounts are after ${fmt(absorbed)} from ${from}.`;
 }
+
+/**
+ * The date in a charge's or refund's panel header, from one source for both: YNAB's date
+ * when the YNAB line is known, else the date it was opened with, else Amazon's.
+ */
+export const panelDate = (focus: Focus, amazon: string) =>
+  (focus.row && readableDates([focus.row.date])) || focus.date || amazon;
 
 /**
  * What an answer rests on, closed until asked for: users only need it when the answer looks
@@ -393,7 +400,8 @@ export function renderFocus(
     const memo = el("button", "acs-memo");
     memo.type = "button";
     memo.textContent = "Copy memo";
-    copyOnClick(memo, split.lines.map((l) => short(l.item.title)).join(", "));
+    // Titles hold commas of their own, so a semicolon tells the items apart.
+    copyOnClick(memo, split.lines.map((l) => short(l.item.title)).join("; "));
     body.push(memo);
   }
   if (absorbed > 0) body.push(line("acs-muted", paidLess(solution, gi, !!one)));
@@ -415,7 +423,7 @@ export function renderFocus(
     );
   if (absorbed > 0) how.push(line(null, `On ${these}, ${shortBy(solution, gi)}.`));
   body.push(howItMatched(how));
-  const shown = floating({ amount: fmt(c.amount), meta: focus.date || c.date, body }, boxes);
+  const shown = floating({ amount: fmt(c.amount), meta: panelDate(focus, c.date), body }, boxes);
   // Part of the page unreadable: the answer may be off, so it's not kept.
   if (changed || !order.orderId) return shown;
   return {

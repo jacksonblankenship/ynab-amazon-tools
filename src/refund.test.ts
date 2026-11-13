@@ -67,6 +67,12 @@ describe("tracing a refund", () => {
     expect(outside.textContent).not.toMatch(/\$80\.08|0257/);
   });
 
+  test("its date is the one it was opened with, like a charge's, not Amazon's refund date", () => {
+    const { order, charges, refund } = refundedOrder();
+    const panel = refundPanel(traceRefund(order, charges, refund), "August 27, 2026");
+    expect(panel.querySelector(".acs-r-meta")?.textContent).toBe("August 27, 2026");
+  });
+
   test("with no card charge, the panel says there's nothing to trace", () => {
     const { order, refund } = refundedOrder();
     const panel = refundPanel(traceRefund(order, [] as Txn[], refund));

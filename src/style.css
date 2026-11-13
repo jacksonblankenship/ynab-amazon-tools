@@ -145,9 +145,18 @@
   padding-top: 0;
   border-top: 0;
 }
+/* The split line that matches: bold on a tint, so it doesn't read as a link. */
 .acs-split tr.acs-hit td {
+  background: #f0f0ff;
   font-weight: 700;
-  color: #3a40d9;
+}
+.acs-split tr.acs-hit td:first-child {
+  border-start-start-radius: 6px;
+  border-end-start-radius: 6px;
+}
+.acs-split tr.acs-hit td:last-child {
+  border-start-end-radius: 6px;
+  border-end-end-radius: 6px;
 }
 .acs-put {
   margin-top: 10px;

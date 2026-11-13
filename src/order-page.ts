@@ -9,7 +9,7 @@ import { solve } from "./matcher.ts";
 import { parseOrder, priceItems } from "./order.ts";
 import { overlayDone, overlayFound, overlayStop, signal } from "./overlay.ts";
 import { answerRefund, refundPanel, traceRefund } from "./refund.ts";
-import { card, renderFocus, renderOrder, reveal, type Shown } from "./render.ts";
+import { card, panelDate, renderFocus, renderOrder, reveal, type Shown } from "./render.ts";
 import { fetchTransactions } from "./transactions.ts";
 import { remember } from "./txn-cache.ts";
 import type { Focus, ParsedOrder, Txn } from "./types.ts";
@@ -130,7 +130,12 @@ async function match(parsed: ParsedOrder, focus: Focus | null): Promise<Shown> {
   const refund = focus && nearest(sameRefunds, (r) => r.date, focus.date);
   if (refund) {
     const trace = traceRefund(order, charges, refund);
-    return { panel: refundPanel(trace), boxes: [], landed: () => {}, trace };
+    return {
+      panel: refundPanel(trace, panelDate(focus, refund.date)),
+      boxes: [],
+      landed: () => {},
+      trace,
+    };
   }
   // The one asked about couldn't be pinned down: say so above the whole order. When the
   // charges didn't load, the whole order's own warning already says why.

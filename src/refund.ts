@@ -98,8 +98,11 @@ export function refundHint(t: Trace): HTMLElement[] {
   return only && !more.length ? [line("acs-muted", `Probably for: ${itemNames(only)}`)] : [];
 }
 
-/** The refund's panel, floating over the order page. answerRefund fills in its answer. */
-export function refundPanel(t: Trace) {
+/**
+ * The refund's panel, floating over the order page. answerRefund fills in its answer. `date`
+ * is the header's (render.ts panelDate); Amazon's refund date without it.
+ */
+export function refundPanel(t: Trace, date = "") {
   const body: Node[] = t.charges.length
     ? [
         el("div", "acs-answer"),
@@ -128,7 +131,7 @@ export function refundPanel(t: Trace) {
     floating: true,
     label: "This refund",
     amount: fmt(t.refund.amount),
-    meta: t.refund.date,
+    meta: date || t.refund.date,
     body,
   });
   document.body.appendChild(panel);
