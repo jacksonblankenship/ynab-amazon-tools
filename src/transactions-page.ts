@@ -17,7 +17,6 @@ import {
 } from "./transactions.ts";
 import { isCovered, remember, rememberSweep, sweptSpan, withCached } from "./txn-cache.ts";
 import type { FindQuery, Txn } from "./types.ts";
-import { planIn } from "./ynab-lookup.ts";
 
 export function isFindQuery(v: unknown): v is FindQuery {
   if (typeof v !== "object" || v === null) return false;
@@ -28,8 +27,7 @@ export function isFindQuery(v: unknown): v is FindQuery {
     typeof q.date === "string" &&
     typeof q.kind === "string" &&
     typeof q.pages === "number" &&
-    typeof q.started === "number" &&
-    (q.plan === undefined || typeof q.plan === "string")
+    typeof q.started === "number"
   );
 }
 
@@ -129,14 +127,12 @@ export async function transactionsPage() {
       );
       return;
     }
-    const plan = planIn(h.get("acs-plan") ?? "");
     q = {
       amount: +find,
       date: h.get("acs-date") || "",
       kind: h.get("acs-kind") || "charge",
       pages: 0,
       started: Date.now(),
-      ...(plan ? { plan } : {}),
     };
     history.replaceState(null, "", location.pathname + location.search);
   } else {
@@ -214,7 +210,7 @@ export async function transactionsPage() {
     const orderUrl = (r: Txn) =>
       isDigitalOrder(r.orderId)
         ? digitalOrderUrl(r.orderId)
-        : `/your-orders/order-details?orderID=${r.orderId}#acs-charge=${r.amount}&acs-on=${encodeURIComponent(r.date)}${r.kind === "refund" ? `&acs-kind=refund${query.plan ? `&acs-plan=${query.plan}` : ""}` : ""}`;
+        : `/your-orders/order-details?orderID=${r.orderId}#acs-charge=${r.amount}&acs-on=${encodeURIComponent(r.date)}${r.kind === "refund" ? "&acs-kind=refund" : ""}`;
     const best = hits.filter((r) => r.diff === closest.diff && r.orderId);
     const orders = [...new Set(best.map((r) => r.orderId))];
     const [first] = best;

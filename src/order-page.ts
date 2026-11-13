@@ -12,7 +12,7 @@ import { card, renderFocus, renderOrder, type Shown } from "./render.ts";
 import { fetchTransactions } from "./transactions.ts";
 import { remember } from "./txn-cache.ts";
 import type { Focus, ParsedOrder, Txn } from "./types.ts";
-import { planIn } from "./ynab-lookup.ts";
+import { planFor } from "./ynab-lookup.ts";
 
 const unreadable = () =>
   overlayStop("Couldn't read this order page", "Amazon may have changed its layout.", [], {
@@ -21,6 +21,8 @@ const unreadable = () =>
 
 export async function orderPage() {
   const focus = focusTarget();
+  // Read once; the address keeps nothing from YNAB.
+  if (focus) history.replaceState(null, "", location.pathname + location.search);
   // parseOrder copes without the "shipments" wrapper, so only the items themselves are required.
   const parsed = $('[data-component="purchasedItems"]') ? parseOrder(document) : null;
   const items = parsed?.shipments.flatMap((s) => s.items) ?? [];
@@ -180,12 +182,13 @@ function launcher(parsed: ParsedOrder, panel?: HTMLElement) {
 
 /**
  * Order page opened from YNAB:
- * #acs-charge=1999&acs-on=January%205%2C%202026[&acs-kind=refund[&acs-plan=<YNAB plan id>]]
+ * #acs-charge=1999&acs-on=January%205%2C%202026[&acs-kind=refund]
+ * A refund's YNAB plan comes from Tampermonkey's storage, never the address.
  */
 export function focusTarget(): Focus | null {
   const h = new URLSearchParams(location.hash.slice(1));
   const amount = Number(h.get("acs-charge"));
   const kind = h.get("acs-kind") === "refund" ? "refund" : "charge";
-  const plan = planIn(h.get("acs-plan") ?? "");
+  const plan = kind === "refund" && amount ? planFor(amount) : undefined;
   return amount ? { amount, date: h.get("acs-on") || "", kind, ...(plan ? { plan } : {}) } : null;
 }

@@ -122,7 +122,7 @@ export interface Focus {
   amount: number;
   date: string;
   kind: "charge" | "refund";
-  /** The YNAB plan the lookup came from, for a refund's category lookup. */
+  /** The YNAB plan the refund was opened from (from Tampermonkey's storage), for its category. */
   plan?: string;
 }
 
@@ -132,7 +132,6 @@ export interface FindQuery {
   kind: string;
   pages: number;
   started: number;
-  plan?: string;
 }
 
 /** A refund traced back to its order, handed from the Amazon tab to the YNAB tab. */

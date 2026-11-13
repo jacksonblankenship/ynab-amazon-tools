@@ -47,8 +47,9 @@ you're already signed in to. It never sees your passwords.
 - **It stores some data in Tampermonkey, on your computer.** It keeps the Amazon
   transactions it has seen (amount, date, order number, status, and card name
   with its last 4 digits) so it doesn't ask Amazon twice. It also keeps a log of when it
-  loaded data from Amazon, and passes a refund's order details to your YNAB tab
-  the same way. Saved transactions are cleared when you sign in to a different
+  loaded data from Amazon. It passes a refund's order details to your YNAB tab
+  the same way, and your YNAB plan's ID to the Amazon tab, so Amazon's page never
+  sees it. Saved transactions are cleared when you sign in to a different
   Amazon account, or any time with **Forget saved Amazon transactions** in
   Tampermonkey's menu.
 - **Refund answers show on Amazon's page.** For a refund, the Amazon page shows

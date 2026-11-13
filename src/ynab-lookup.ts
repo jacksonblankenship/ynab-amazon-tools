@@ -1,7 +1,7 @@
 // Refund tracing, the YNAB API side: find the order's original charges in YNAB and say which
 // category the refund goes back to. Runs in either tab: it reads no page, only Tampermonkey's
 // storage, and talks only to api.ynab.com.
-import { GM_xmlhttpRequest } from "$";
+import { GM_getValue, GM_setValue, GM_xmlhttpRequest } from "$";
 import { DAY, toDay } from "./dates.ts";
 import { errMsg } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
@@ -15,8 +15,45 @@ export const TOKEN_KEY = "ynab-token";
  */
 export const AMAZON_PAYEE = /^(?!.*(web services|\baws\b)).*(amazon|amzn)/i;
 
-/** The YNAB plan id (a UUID) in a YNAB path or a link's hash; nothing else goes in a request. */
+/** The YNAB plan id (a UUID) in a YNAB path or stored value; nothing else goes in a request. */
 export const planIn = (s: string) => s.match(/[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}/i)?.[0];
+
+/**
+ * Where the YNAB tab leaves a refund's plan for the Amazon tab, by the refund's amount in cents,
+ * in Tampermonkey's storage: Amazon's page can't read it, so the plan id never reaches Amazon.
+ * Keyed by amount so two refunds opened in quick succession each find their own.
+ */
+const PLANS_KEY = "acs-plans";
+/** A plan left longer ago than this is from an earlier lookup. */
+const PLAN_MS = 6e5;
+
+type Plans = Record<string, { plan: string; at: number }>;
+function storedPlans(): Plans {
+  try {
+    const v: unknown = GM_getValue(PLANS_KEY, {});
+    return typeof v === "object" && v !== null ? (v as Plans) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function rememberPlan(amount: number, plan: string) {
+  const now = Date.now();
+  const fresh = Object.entries(storedPlans()).filter(([, p]) => now - p?.at < PLAN_MS);
+  try {
+    GM_setValue(PLANS_KEY, { ...Object.fromEntries(fresh), [amount]: { plan, at: now } });
+  } catch {
+    /* the Amazon tab will leave the lookup to the YNAB tab */
+  }
+}
+
+/** The plan the YNAB tab left for a refund of `amount` cents, if it's recent. */
+export function planFor(amount: number): string | undefined {
+  const p = storedPlans()[amount];
+  return p && typeof p.plan === "string" && Date.now() - p.at < PLAN_MS
+    ? planIn(p.plan)
+    : undefined;
+}
 
 // The parts of YNAB's API transaction this script reads. Amounts are milliunits (cents × 10).
 interface YnabSub {

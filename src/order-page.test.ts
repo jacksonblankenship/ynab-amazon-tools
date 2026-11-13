@@ -14,9 +14,10 @@ import listRows from "../test/fixtures/amazon/transactions-list.rows.html?raw";
 import { loadPage } from "../test/html.ts";
 import { solve } from "./matcher.ts";
 import { parseOrder, priceItems } from "./order.ts";
-import { creditRange, focusTarget } from "./order-page.ts";
+import { creditRange, focusTarget, orderPage } from "./order-page.ts";
 import { fetchTransactions } from "./transactions.ts";
 import type { Txn } from "./types.ts";
+import { rememberPlan } from "./ynab-lookup.ts";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -114,12 +115,15 @@ describe("how much points or gift cards paid toward an order", () => {
 });
 
 describe("opened from YNAB", () => {
-  test("a refund's link carries the YNAB plan; anything but a plan id is dropped", () => {
-    const plan = "b49ec261-e368-45d9-8d7c-be85300bf1d4";
+  const plan = "b49ec261-e368-45d9-8d7c-be85300bf1d4";
+
+  test("a refund's YNAB plan comes from Tampermonkey's storage, by its amount, not the address", () => {
+    rememberPlan(6864, plan);
+    rememberPlan(1234, "5f4df66c-de7f-49de-9ccc-9dc222ec6379");
     history.replaceState(
       null,
       "",
-      `/your-orders/order-details#acs-charge=6864&acs-on=September%2010%2C%202026&acs-kind=refund&acs-plan=${plan}`,
+      "/your-orders/order-details#acs-charge=6864&acs-on=September%2010%2C%202026&acs-kind=refund&acs-plan=5f4df66c-de7f-49de-9ccc-9dc222ec6379",
     );
     expect(focusTarget()).toEqual({
       amount: 6864,
@@ -127,11 +131,22 @@ describe("opened from YNAB", () => {
       kind: "refund",
       plan,
     });
+  });
+
+  test("a charge takes no plan", () => {
+    rememberPlan(6864, plan);
+    history.replaceState(null, "", "/your-orders/order-details#acs-charge=6864");
+    expect(focusTarget()).not.toHaveProperty("plan");
+  });
+
+  test("the order page's address is cleaned once it's read", async () => {
     history.replaceState(
       null,
       "",
-      "/your-orders/order-details#acs-charge=6864&acs-kind=refund&acs-plan=..%2Fuser",
+      "/your-orders/order-details?orderID=1#acs-charge=6864&acs-kind=refund",
     );
-    expect(focusTarget()).not.toHaveProperty("plan");
+    await orderPage();
+    expect(location.hash).toBe("");
+    expect(location.search).toBe("?orderID=1");
   });
 });

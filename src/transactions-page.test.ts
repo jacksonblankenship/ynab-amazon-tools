@@ -78,7 +78,7 @@ describe("scrolling for older transactions", () => {
 });
 
 describe("previewing equally likely orders", () => {
-  test("each refund's link carries the YNAB plan on to the order page", async () => {
+  test("a YNAB plan in an old link goes no further: not in the order links, not in sessionStorage", async () => {
     const plan = "b49ec261-e368-45d9-8d7c-be85300bf1d4";
     nextData(
       ["114-1111111-1111111", "114-2222222-2222222"].map((id) => ({
@@ -91,16 +91,19 @@ describe("previewing equally likely orders", () => {
       "fetch",
       vi.fn(async () => new Response("<html></html>")),
     );
+    const stored: string[] = [];
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation((_k, v) => void stored.push(v));
     arriveFromYnab(1234, "2026-09-11", `&acs-kind=refund&acs-plan=${plan}`);
     await transactionsPage();
     await vi.runAllTimersAsync();
     const links = [...document.querySelectorAll<HTMLAnchorElement>("a[href*='order-details']")];
     expect(links).toHaveLength(2);
     for (const a of links) {
-      const h = new URLSearchParams(new URL(a.href).hash.slice(1));
-      expect(h.get("acs-kind")).toBe("refund");
-      expect(h.get("acs-plan")).toBe(plan);
+      expect(new URLSearchParams(new URL(a.href).hash.slice(1)).get("acs-kind")).toBe("refund");
+      expect(a.href).not.toContain(plan);
     }
+    expect(stored.join(" ")).not.toContain(plan);
+    expect(location.hash).toBe("");
   });
 
   test("fetches each order's contents a second apart, not all at once", async () => {

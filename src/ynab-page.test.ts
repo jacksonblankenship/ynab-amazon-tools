@@ -5,6 +5,7 @@ import { describe, expect, test } from "vitest";
 import { loadPage } from "../test/html.ts";
 import registerRows from "../test/fixtures/ynab/register-rows.html?raw";
 import { ynabPage } from "./ynab-page.ts";
+import { planFor } from "./ynab-lookup.ts";
 
 function openRegister(rows = registerRows) {
   loadPage(`<html><body><div class="ynab-grid-body">${rows}</div></body></html>`);
@@ -72,14 +73,16 @@ describe("hovering an Amazon row", () => {
     });
   });
 
-  test("a refund also passes the YNAB plan on screen; a charge doesn't need it", () => {
+  test("a refund's YNAB plan waits in Tampermonkey's storage, never in the link to Amazon", () => {
     const plan = "b49ec261-e368-45d9-8d7c-be85300bf1d4";
     history.replaceState(null, "", `/${plan}/accounts`);
     openRegister();
     hover(rowWith("2026-09-11", "$68.64"));
-    expect(search()["acs-plan"]).toBe(plan);
+    expect(button().href).not.toContain(plan);
+    expect(planFor(6864)).toBe(plan);
+    // A charge doesn't need it.
     hover(rowWith("2026-09-11", "$236.52"));
-    expect(search()["acs-plan"]).toBeUndefined();
+    expect(planFor(23652)).toBeUndefined();
     history.replaceState(null, "", "/");
   });
 
