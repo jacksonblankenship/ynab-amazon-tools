@@ -316,6 +316,21 @@ describe("the whole-order panel", () => {
     expect(matched(panel)).toMatch(/\$10\.00 on January 12, 2026/);
     expect(panel.querySelector("details a")?.getAttribute("href")).toMatch(/111-1111111-1111111/);
   });
+
+  test("is capped in height on every screen, so it never fills the page", () => {
+    const { panel } = renderOrder(order([[wipes]], 0).order, {
+      charges: [],
+      credits: [],
+      refunds: [],
+      solution: null,
+      warnings: [],
+      error: null,
+      changed: false,
+    });
+    expect(panel.classList).toContain("acs-whole");
+    const rule = css.match(/^\.acs-result\.acs-floating\.acs-whole \{([^}]*)\}/m)?.[1] ?? "";
+    expect(rule).toMatch(/max-block-size: /);
+  });
 });
 
 describe('"How it matched" and the refund answer\'s look', () => {

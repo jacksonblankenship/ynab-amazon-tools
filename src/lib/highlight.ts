@@ -42,3 +42,17 @@ export function highlight(prefix: string, targets: Element[]): Highlight {
     },
   };
 }
+
+type Edges = Pick<DOMRect, "left" | "top" | "right" | "bottom">;
+
+/**
+ * Where to scroll `box`'s top to, in viewport pixels, so `cover` (a panel pinned over the
+ * page) doesn't hide it. A panel over only part of its width leaves it readable; one across
+ * it sends the box to the larger free band above or below the panel.
+ */
+export function clearTop(box: Edges, cover: Edges | null, viewH: number, gap = 16): number {
+  if (!cover) return gap;
+  const overlap = Math.min(box.right, cover.right) - Math.max(box.left, cover.left);
+  if (overlap * 2 <= box.right - box.left) return gap;
+  return cover.top >= viewH - cover.bottom ? gap : cover.bottom + gap;
+}

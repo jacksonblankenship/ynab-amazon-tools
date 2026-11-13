@@ -34,6 +34,16 @@
   padding-top: 0;
   border-top: 0;
 }
+/* The whole order runs long: capped, so it never fills the page and scrolls inside itself.
+   At phone width it takes the bottom sheet's cap (src/lib/suite.css). */
+.acs-result.acs-floating.acs-whole {
+  max-block-size: min(70vh, 640px);
+}
+@media (width <= 600px) {
+  .acs-result.acs-floating.acs-whole {
+    max-block-size: 45dvh;
+  }
+}
 /* "How it matched": supporting detail, so a quiet, muted summary. */
 .acs-how {
   margin-top: 10px;

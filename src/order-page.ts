@@ -9,7 +9,7 @@ import { solve } from "./matcher.ts";
 import { parseOrder, priceItems } from "./order.ts";
 import { overlayDone, overlayFound, overlayStop, signal } from "./overlay.ts";
 import { answerRefund, refundPanel, traceRefund } from "./refund.ts";
-import { card, renderFocus, renderOrder, type Shown } from "./render.ts";
+import { card, renderFocus, renderOrder, reveal, type Shown } from "./render.ts";
 import { fetchTransactions } from "./transactions.ts";
 import { remember } from "./txn-cache.ts";
 import type { Focus, ParsedOrder, Txn } from "./types.ts";
@@ -54,9 +54,7 @@ export async function orderPage() {
       focus.row ? { ...shown.trace, row: focus.row } : shown.trace,
       focus.plan,
     );
-  const cards = shown.boxes.map(card);
-  const top = Math.min(...cards.map((c) => c.getBoundingClientRect().top));
-  if (Number.isFinite(top)) window.scrollTo({ top: window.scrollY + top - 16 });
+  reveal(shown.boxes.map(card), shown.panel);
   overlayDone(shown.panel, shown.landed);
   // Closed, it can still be looked at again, as the whole order.
   launcher(parsed, shown.panel);

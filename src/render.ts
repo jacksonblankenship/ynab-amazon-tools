@@ -3,7 +3,7 @@
 import { nearest } from "./dates.ts";
 import { $$, el, esc, line } from "./lib/dom.ts";
 import { must } from "./lib/errors.ts";
-import { type Highlight, highlight } from "./lib/highlight.ts";
+import { clearTop, type Highlight, highlight } from "./lib/highlight.ts";
 import { fmt } from "./lib/money.ts";
 import { resultPanel } from "./lib/result-panel.ts";
 import { reportLine } from "./lib/suite.ts";
@@ -46,6 +46,16 @@ export const card = (box: Element) => {
   const c = box.closest(".a-box");
   return c && $$('[data-component="shipmentStatus"]', c).length === 1 ? c : box;
 };
+
+/** Scroll the first of `cards` into view, clear of `panel` pinned over the page. */
+export function reveal(cards: Element[], panel: Element | null) {
+  const first = cards
+    .map((c) => c.getBoundingClientRect())
+    .reduce<DOMRect | null>((a, b) => (a && a.top <= b.top ? a : b), null);
+  if (!first) return;
+  const cover = panel?.isConnected ? panel.getBoundingClientRect() : null;
+  window.scrollTo({ top: window.scrollY + first.top - clearTop(first, cover, innerHeight) });
+}
 
 /**
  * On click, put `text` on the clipboard and say so on the button for a moment, and to screen
@@ -191,7 +201,7 @@ function section(boxes: Element[], title: string, nodes: Node[]) {
   head.textContent = title;
   head.title = "Show on the page";
   const cards = boxes.map(card);
-  head.addEventListener("click", () => cards[0]?.scrollIntoView({ block: "center" }));
+  head.addEventListener("click", () => reveal(cards, s.closest(".acs-result")));
   let ring: Highlight | null = null;
   s.addEventListener("mouseenter", () => {
     ring = highlight(suite.prefix, cards);
@@ -311,7 +321,7 @@ export function renderOrder(order: Order, result: RenderResult, lead: Node[] = [
       ),
     );
   if (how.length) body.push(howItMatched(how));
-  return floating(
+  const shown = floating(
     {
       label: "This order",
       amount: order.summary.grand == null ? "" : fmt(order.summary.grand),
@@ -320,6 +330,8 @@ export function renderOrder(order: Order, result: RenderResult, lead: Node[] = [
     },
     [],
   );
+  shown.panel.classList.add("acs-whole");
+  return shown;
 }
 
 /**
