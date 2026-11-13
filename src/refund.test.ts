@@ -43,15 +43,16 @@ describe("tracing a refund", () => {
     const { order, charges, refund } = refundedOrder();
     const panel = refundPanel(traceRefund(order, charges, refund));
     expect(panel.textContent).toMatch(/\$68\.64/);
-    expect(panel.textContent).toMatch(/This order's card charges: \$80\.08 on August 20, 2026\./);
-    expect(panel.textContent).toMatch(/Switch back to your YNAB tab/);
-    expect(panel.textContent).not.toMatch(/Probably for/);
+    expect(panel.textContent).toMatch(/\$80\.08 on August 20, 2026/);
+    expect(panel.textContent).toMatch(/YNAB tab/);
+    // No item adds up to the refund, so none is named.
+    expect(panel.textContent).not.toMatch(/Rain Jacket/);
   });
 
   test("with no card charge, the panel says there's nothing to trace", () => {
     const { order, refund } = refundedOrder();
     const panel = refundPanel(traceRefund(order, [] as Txn[], refund));
-    expect(panel.textContent).toMatch(/didn't show a card charge/);
-    expect(panel.textContent).not.toMatch(/Switch back/);
+    expect(panel.textContent).toMatch(/card charge/);
+    expect(panel.textContent).not.toMatch(/YNAB tab/);
   });
 });

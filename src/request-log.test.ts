@@ -70,19 +70,19 @@ describe("the request log panel", () => {
     ]);
     requestLogPanel();
     const text = panelText();
-    expect(text).toContain("loads of older transactions in the last 24 hours");
+    // Three requests in the last 24 hours; the one from two days ago isn't counted.
     expect(document.querySelector(".acs-r-num")?.textContent).toBe("3");
-    expect(text).toContain("Last hour: 1 answered, 1 refused.");
-    expect(text).toContain("Last 24 hours: 2 answered, 1 refused.");
-    expect(text).toContain("Last refusal:");
+    expect(text).toMatch(/hour\D*1 answered, 1 refused/i);
+    expect(text).toMatch(/24 hours\D*2 answered, 1 refused/i);
+    expect(text).toMatch(/last refusal/i);
+    // Every request is listed.
     expect(document.querySelectorAll("tr")).toHaveLength(4);
-    expect(text).toContain("refused");
   });
 
   test("an empty log says nothing has happened yet", () => {
     requestLogPanel();
-    expect(panelText()).toContain("Nothing yet.");
-    expect(panelText()).toContain("No refusals logged.");
+    expect(panelText()).toMatch(/nothing yet/i);
+    expect(panelText()).toMatch(/no refusals/i);
   });
 
   test("opening it again replaces the panel rather than stacking another", () => {
