@@ -10,7 +10,7 @@ import { FIND_KEY, overlay, overlayFound, overlayStop, signal } from "./overlay.
 import { logRequest, requestLog } from "./request-log.ts";
 import { leaves } from "./scrape.ts";
 import { parseTransactions, transactionRows } from "./transactions.ts";
-import { cachedTxns, isCovered, remember, rememberSweep, sweptSpan } from "./txn-cache.ts";
+import { isCovered, remember, rememberSweep, sweptSpan, withCached } from "./txn-cache.ts";
 import type { FindQuery, Txn } from "./types.ts";
 
 export function isFindQuery(v: unknown): v is FindQuery {
@@ -246,8 +246,8 @@ export async function transactionsPage() {
   const fromTop = !query.pages;
   const fresh = fromTop ? sweptSpan(rows, false) : null;
   rememberSweep("all", fresh);
-  let hits = findHits(rows);
-  if (!hits.length) hits = findHits(cachedTxns());
+  // Together, so a closer match seen before beats a farther one on the page.
+  let hits = findHits(withCached(rows));
   if (hits.length) return open(hits);
   if (isPast(rows)) return notFound("Searched back past that date.");
   // Every transaction within two weeks of the date was seen before, so asking again can't find it.

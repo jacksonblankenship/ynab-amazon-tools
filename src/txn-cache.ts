@@ -52,9 +52,11 @@ export const today = () => Math.round(new Date().setHours(0, 0, 0, 0) / DAY);
 // Not the status: a pending charge seen again once charged replaces itself.
 const key = (r: Stored) => [r.orderIds.join(","), r.amount, r.date, r.kind, r.method].join("|");
 
-/** Every transaction seen so far, as rows not on the page. */
-export function cachedTxns(): Txn[] {
-  return load().rows.map((r) => ({ ...r, el: null }));
+/** These rows, then every transaction seen so far that isn't one of them. */
+export function withCached(rows: Txn[]): Txn[] {
+  const have = new Set(rows.map(key));
+  const more = load().rows.filter((r) => !have.has(key(r)));
+  return [...rows, ...more.map((r) => ({ ...r, el: null }))];
 }
 
 export function remember(rows: Txn[]) {
