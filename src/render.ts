@@ -217,31 +217,33 @@ export function renderOrder(order: Order, result: RenderResult, lead: Node[] = [
     body.push(
       el("div", "acs-muted", "No card charges yet. Amazon charges when each delivery ships."),
     );
+  // Payments that aren't card charges, and where to check them all, for doubting the match.
+  const how: Node[] = [];
   if (credits.length)
-    body.push(
+    how.push(
       el(
         "div",
-        "acs-muted",
+        null,
         `Also paid with: ${credits.map((c) => `${esc(c.method)} ${fmt(c.amount)}`).join(", ")}`,
       ),
     );
   if (refunds.length)
-    body.push(
+    how.push(
       el(
         "div",
-        "acs-muted",
+        null,
         `Refunds: ${refunds.map((c) => `${fmt(c.amount)} on ${esc(c.date)} to ${esc(c.method)}`).join(", ")}`,
       ),
     );
-
   if (order.orderId)
-    body.push(
+    how.push(
       el(
         "div",
-        "acs-muted acs-more",
+        null,
         `<a href="/cpe/yourpayments/transactions?transactionTag=${encodeURIComponent(order.orderId)}">This order's transactions on Amazon</a>`,
       ),
     );
+  if (how.length) body.push(howItMatched(how));
   return floating(
     {
       label: "This order",

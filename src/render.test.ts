@@ -1,7 +1,7 @@
 // The order page's panels: what they lead with, and what waits behind "How it matched".
 // Orders are built by hand so each case (one item, several charges, points) is exact.
 import { describe, expect, test } from "vitest";
-import { renderFocus } from "./render.ts";
+import { renderFocus, renderOrder } from "./render.ts";
 import type { Focus, Order, PricedItem, Solution, Txn } from "./types.ts";
 
 const item = (title: string, total: number, shipment = 0): PricedItem => ({
@@ -184,5 +184,31 @@ describe("the single-charge panel", () => {
     const { order: o, solve } = order([[diapers, wipes]], 0);
     const charges = [charge(2732, "January 4, 2026")];
     expect(renderFocus(o, charges, solve(charges), { ...focus, amount: 999 })).toBeNull();
+  });
+});
+
+describe("the whole-order panel", () => {
+  test("shows each delivery's items; other payments, refunds and the link are detail", () => {
+    const { order: o, solve } = order([[diapers, wipes]], 0);
+    const charges = [charge(2732, "January 4, 2026")];
+    const gift: Txn = { ...charge(500, "January 4, 2026"), method: "Amazon Gift Card" };
+    const refund: Txn = { ...charge(1000, "January 12, 2026"), kind: "refund" };
+    const { panel } = renderOrder(o, {
+      charges,
+      credits: [{ ...gift, kind: "credit" }],
+      refunds: [refund],
+      solution: solve(charges),
+      warnings: [],
+      error: null,
+      changed: false,
+    });
+    expect(rows(panel)).toEqual([
+      ["Huggies Size 3 Diapers", "$10.00"],
+      ["Clorox Wipes, 3 pack", "$17.32"],
+    ]);
+    expect(visible(panel)).not.toMatch(/Gift Card|January 12/);
+    expect(matched(panel)).toMatch(/Amazon Gift Card \$5\.00/);
+    expect(matched(panel)).toMatch(/\$10\.00 on January 12, 2026/);
+    expect(panel.querySelector("details a")?.getAttribute("href")).toMatch(/111-1111111-1111111/);
   });
 });

@@ -149,9 +149,6 @@
 .acs-result button.acs-del-h:hover {
   text-decoration: underline;
 }
-.acs-more {
-  margin-top: 10px;
-}
 /* Bottom-left: Amazon's cart sidebar takes the right edge. */
 .acs-launch {
   position: fixed;
