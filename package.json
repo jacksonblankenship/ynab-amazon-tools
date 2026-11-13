@@ -1,0 +1,16 @@
+{
+  "name": "ynab-amazon-tools",
+  "version": "2.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Tools that make working with Amazon purchases in YNAB easier.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "devDependencies": {
+    "vite": "^8.3.8",
+    "vite-plugin-monkey": "^8.1.1"
+  }
+}
