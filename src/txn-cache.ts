@@ -7,6 +7,9 @@
 // the days below its newest row and above its oldest (that day may continue further down).
 // Stored coverage stops short of the day it was swept, since a pending charge can post later
 // under an earlier date; the current page's rows cover up to today.
+//
+// One Amazon account at a time: the cache is tagged with the account it came from, and a page
+// signed in to a different one starts it afresh, so one account's rows never answer for another.
 import { GM_getValue, GM_setValue } from "$";
 import { DAY, toDay } from "./dates.ts";
 import type { Txn } from "./types.ts";
@@ -23,13 +26,18 @@ export type List = "all" | "refunds";
 type Span = [number, number];
 type Stored = Omit<Txn, "el">;
 interface Cache {
+  account?: string;
   rows: Stored[];
   covered: Record<List, Span[]>;
 }
 
 const empty = (): Cache => ({ rows: [], covered: { all: [], refunds: [] } });
 
-function load(): Cache {
+// Amazon's own hash of the customer id, on the header's shortcut menu on every signed-in page.
+const account = () =>
+  document.querySelector("[data-hashed-id]")?.getAttribute("data-hashed-id") || undefined;
+
+function read(): Cache {
   try {
     const v: unknown = GM_getValue(CACHE_KEY, null);
     if (!v || typeof v !== "object") return empty();
@@ -38,6 +46,14 @@ function load(): Cache {
   } catch {
     return empty();
   }
+}
+
+// Where the account can't be told, the cache is used as it is; an untagged one is adopted.
+function load(): Cache {
+  const c = read();
+  const now = account();
+  if (!now) return c;
+  return c.account && c.account !== now ? { ...empty(), account: now } : { ...c, account: now };
 }
 
 function store(c: Cache) {
