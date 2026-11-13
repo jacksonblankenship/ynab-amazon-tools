@@ -8,6 +8,24 @@ export const toDay = (s: string) => {
   return Number.isNaN(t) ? null : Math.round(t / DAY);
 };
 
+/**
+ * The item dated nearest `date`, or the first if none can be compared. The transactions page
+ * writes "Nov 04, 2026" where an order's own list writes "November 3, 2026", sometimes a day
+ * apart, so the same charge's dates can't be matched as text.
+ */
+export function nearest<T>(items: T[], dateOf: (t: T) => string, date: string): T | undefined {
+  const day = toDay(date);
+  let best = items[0];
+  let gap = Infinity;
+  if (day == null) return best;
+  for (const t of items) {
+    const d = toDay(dateOf(t));
+    const g = d == null ? Infinity : Math.abs(d - day);
+    if (g < gap) [best, gap] = [t, g];
+  }
+  return best;
+}
+
 const LONG = new Intl.DateTimeFormat("en-US", {
   month: "long",
   day: "numeric",

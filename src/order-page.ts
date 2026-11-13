@@ -1,5 +1,6 @@
 // Order details page: parse, fetch the order's charges, match them, and show the result.
 import { GM_setValue } from "$";
+import { nearest } from "./dates.ts";
 import { $, $$ } from "./lib/dom.ts";
 import { errMsg, PageChanged } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
@@ -91,7 +92,7 @@ export async function orderPage() {
   render(order, { charges, credits, refunds, solution, warnings, error, changed });
   // Opened from a YNAB refund: show it, and hand its trace to the YNAB tab.
   const sameRefunds = focus && !error ? refunds.filter((r) => r.amount === focus.amount) : [];
-  const refund = sameRefunds.find((r) => r.date === focus?.date) ?? sameRefunds[0];
+  const refund = focus && nearest(sameRefunds, (r) => r.date, focus.date);
   if (refund) {
     const trace = traceRefund(order, charges, refund);
     const panel = refundPanel(trace);

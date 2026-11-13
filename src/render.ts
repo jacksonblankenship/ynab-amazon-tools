@@ -1,4 +1,5 @@
 // Order page UI: the per-delivery banners, the order-level panel, and the single-charge view.
+import { nearest } from "./dates.ts";
 import { $, $$, el, esc } from "./lib/dom.ts";
 import { must, PageChanged } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
@@ -213,7 +214,7 @@ export function renderFocus(
     const gi = solution.assign[j];
     return gi !== undefined && gi >= 0 && c.amount === focus.amount ? [{ c, gi }] : [];
   });
-  const hit = matched.find((x) => x.c.date === focus.date) ?? matched[0];
+  const hit = nearest(matched, (x) => x.c.date, focus.date);
   if (!hit) return null;
   const { c, gi } = hit;
   const g = must(solution.groups[gi], `group ${gi}`);
