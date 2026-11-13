@@ -6,7 +6,12 @@ import { $$, txt } from "./lib/dom.ts";
 // have been stable; each one also has a content-based fallback.
 export const MONEY_RE = /[-+−]?\s*\$\s*[\d,]+\.\d{2}/g;
 export const IS_MONEY = /^[-+−]?\s*\$\s*[\d,]+\.\d{2}$/;
-export const ORDER_RE = /\d{3}-\d{7}-\d{7}/;
+// "123-…" for shipped orders; "D01-…" for digital ones (Kindle, video, apps).
+export const ORDER_RE = /(?:\d{3}|D\d{2})-\d{7}-\d{7}/;
+export const isDigitalOrder = (id: string) => id.startsWith("D");
+// Digital orders have their own details page, which the order-page reader doesn't know.
+export const digitalOrderUrl = (id: string) =>
+  `/gp/digital/your-account/order-summary.html?orderID=${encodeURIComponent(id)}`;
 // Amazon has written dates both as "November 2, 2026" and as "Nov 02, 2026".
 export const DATE_RE =
   /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.? \d{1,2}, \d{4}$/;

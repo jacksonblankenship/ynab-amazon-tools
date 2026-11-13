@@ -11,7 +11,8 @@ import { GM_getValue, GM_setValue } from "$";
 import { DAY, toDay } from "./dates.ts";
 import type { Txn } from "./types.ts";
 
-const CACHE_KEY = "acs-txns";
+// v2: earlier versions skipped digital orders' rows, so their "covered" days can't vouch for those.
+const CACHE_KEY = "acs-txns-v2";
 const MAX_ROWS = 4000;
 const GRACE_DAYS = 7;
 // Stored as JSON, which has no -Infinity: a day long before any transaction.

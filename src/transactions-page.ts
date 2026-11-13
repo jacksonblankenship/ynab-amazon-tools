@@ -8,7 +8,7 @@ import { sleep, until } from "./lib/spa.ts";
 import { parseOrder } from "./order.ts";
 import { FIND_KEY, overlay, overlayFound, overlayStop, signal } from "./overlay.ts";
 import { isRefusal, logRequest, requestLog } from "./request-log.ts";
-import { leaves } from "./scrape.ts";
+import { digitalOrderUrl, isDigitalOrder, leaves } from "./scrape.ts";
 import {
   cardsUnreadable,
   parseTransactions,
@@ -33,6 +33,7 @@ export function isFindQuery(v: unknown): v is FindQuery {
 
 /** What an order contained, for telling apart equally likely matches. Null if unreadable. */
 async function orderContents(orderId: string): Promise<string | null> {
+  if (isDigitalOrder(orderId)) return null;
   try {
     const res = await fetch(`/your-orders/order-details?orderID=${encodeURIComponent(orderId)}`, {
       credentials: "include",
@@ -207,10 +208,20 @@ export async function transactionsPage() {
     const closest = must(hits[0], "closest hit");
     save(null);
     const orderUrl = (r: Txn) =>
-      `/your-orders/order-details?orderID=${r.orderId}#acs-charge=${r.amount}&acs-on=${encodeURIComponent(r.date)}`;
+      isDigitalOrder(r.orderId)
+        ? digitalOrderUrl(r.orderId)
+        : `/your-orders/order-details?orderID=${r.orderId}#acs-charge=${r.amount}&acs-on=${encodeURIComponent(r.date)}`;
     const best = hits.filter((r) => r.diff === closest.diff && r.orderId);
     const orders = [...new Set(best.map((r) => r.orderId))];
     const [first] = best;
+    // Found, but this script can't read a digital order's page: say so and link it.
+    if (orders.length === 1 && first && isDigitalOrder(first.orderId))
+      return overlayStop(
+        `Found ${fmt(query.amount)}: a digital order`,
+        "Digital orders (Kindle, video, apps) can't be broken down by item. Open it on Amazon to see what it was.",
+        [{ label: `${first.date} · Order #${first.orderId}`, href: orderUrl(first) }],
+        { finished: true },
+      );
     if (orders.length === 1 && first) {
       overlayFound(`Found ${fmt(query.amount)}`, "Opening the order");
       location.replace(orderUrl(first));
