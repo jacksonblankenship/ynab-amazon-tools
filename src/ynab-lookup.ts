@@ -5,7 +5,7 @@ import { GM_getValue, GM_setValue, GM_xmlhttpRequest } from "$";
 import { DAY, toDay } from "./dates.ts";
 import { errMsg } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
-import type { RefundLookup, Trace } from "./types.ts";
+import type { LookupError, RefundLookup, Trace } from "./types.ts";
 
 export const TOKEN_KEY = "ynab-token";
 
@@ -184,9 +184,7 @@ function foundCharge(
   };
 }
 
-export type LookupResult =
-  | { lookup: RefundLookup }
-  | { error: string; badToken?: boolean; report?: boolean };
+export type LookupResult = { lookup: RefundLookup } | LookupError;
 
 /**
  * Find the trace's charges in YNAB: in `plan`, or the last-used one without it, and in other

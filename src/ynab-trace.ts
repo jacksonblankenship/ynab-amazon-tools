@@ -10,7 +10,7 @@ import { reportLine } from "./lib/suite.ts";
 import { suite } from "./overlay.ts";
 import { howItMatched, notInYnab, refundHint, TRACE_KEY } from "./refund.ts";
 import { short } from "./render.ts";
-import type { RefundLookup, Trace } from "./types.ts";
+import type { LookupError, RefundLookup, Trace } from "./types.ts";
 import { lookUpRefund, planIn, refundAnswer, TOKEN_KEY } from "./ynab-lookup.ts";
 
 /** A trace older than this is from an earlier refund lookup; don't show it. */
@@ -28,7 +28,12 @@ function isTrace(v: unknown): v is Trace {
     Array.isArray(t.charges) &&
     Array.isArray(t.itemSets) &&
     (t.lookup === undefined ||
-      (typeof t.lookup === "object" && t.lookup !== null && "charges" in t.lookup))
+      (typeof t.lookup === "object" && t.lookup !== null && "charges" in t.lookup)) &&
+    (t.lookupError === undefined ||
+      (typeof t.lookupError === "object" &&
+        t.lookupError !== null &&
+        "error" in t.lookupError &&
+        typeof t.lookupError.error === "string"))
   );
 }
 
@@ -136,18 +141,24 @@ async function fillTrace(body: HTMLElement, t: Trace): Promise<void> {
         "Amazon didn't show a card charge for this order, so there's nothing to trace.",
       ),
     ]);
-  // The Amazon tab already asked YNAB: show its answer rather than ask again.
+  // The Amazon tab already asked YNAB: show its answer, or why it got none, rather than ask
+  // again (a rate limit would only refuse again). A new token asks afresh.
   if (t.lookup) return say(...lookupNodes(t.lookup, t));
+  const { lookupError, ...fresh } = t;
+  const failed = (e: LookupError) => {
+    if (e.badToken) {
+      GM_setValue(TOKEN_KEY, "");
+      return say([line("acs-warn", e.error), ...tokenForm(() => fillTrace(body, fresh))]);
+    }
+    say([e.report ? reportLine(suite, "acs-warn", e.error) : line("acs-warn", e.error)]);
+  };
+  if (lookupError) return failed(lookupError);
   const token = GM_getValue(TOKEN_KEY, "");
   if (!token) return say(tokenForm(() => fillTrace(body, t)));
   say([line("acs-muted", "Looking up the original charge in YNAB…")]);
   const res = await lookUpRefund(t, planIn(location.pathname), token);
   if ("lookup" in res) return say(...lookupNodes(res.lookup, t));
-  if (res.badToken) {
-    GM_setValue(TOKEN_KEY, "");
-    return say([line("acs-warn", res.error), ...tokenForm(() => fillTrace(body, t))]);
-  }
-  say([res.report ? reportLine(suite, "acs-warn", res.error) : line("acs-warn", res.error)]);
+  failed(res);
 }
 
 function showTrace(t: Trace) {

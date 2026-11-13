@@ -145,8 +145,17 @@ export interface Trace {
   charges: { amount: number; date: string; method: string }[];
   /** The YNAB lookup, when the Amazon tab already made it, so the YNAB tab needn't ask again. */
   lookup?: RefundLookup;
+  /** Why the Amazon tab's lookup failed, so the YNAB tab shows it rather than ask again. */
+  lookupError?: LookupError;
   /** Set once a YNAB tab has shown it, so it shows once. */
   shown?: boolean;
+}
+
+/** A YNAB lookup that failed: what to say, and whether the token or the script is at fault. */
+export interface LookupError {
+  error: string;
+  badToken?: boolean;
+  report?: boolean;
 }
 
 /** One YNAB charge line: its category (or each split line's). Amounts in cents. */

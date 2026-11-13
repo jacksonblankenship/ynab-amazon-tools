@@ -9,7 +9,7 @@ import { resultPanel } from "./lib/result-panel.ts";
 import { suite } from "./overlay.ts";
 import { short } from "./render.ts";
 import type { Order, PricedItem, RefundLookup, Trace, Txn } from "./types.ts";
-import { lookUpRefund, refundAnswer, TOKEN_KEY } from "./ynab-lookup.ts";
+import { type LookupResult, lookUpRefund, refundAnswer, TOKEN_KEY } from "./ynab-lookup.ts";
 
 /** Where the Amazon tab leaves a trace for the YNAB tab, in Tampermonkey's storage. */
 export const TRACE_KEY = "acs-trace";
@@ -136,15 +136,18 @@ export function refundPanel(t: Trace) {
 
 /**
  * Ask YNAB where the refund goes back to, show it on the panel, and hand the trace (with
- * YNAB's answer, so it isn't asked twice) to the YNAB tab. Without a token or the YNAB plan,
- * the YNAB tab does the asking. The token form is never put on Amazon's page.
+ * YNAB's answer, or why there's none, so it isn't asked twice) to the YNAB tab. Without a token
+ * or the YNAB plan, the YNAB tab does the asking. The token form is never put on Amazon's page.
  */
 export async function answerRefund(panel: HTMLElement, t: Trace, plan: string | undefined) {
   const answer = $(".acs-answer", panel);
   const say = (...nodes: Node[]) => answer?.replaceChildren(...nodes);
-  const handOver = (lookup?: RefundLookup) => {
+  const handOver = (res?: LookupResult) => {
     try {
-      GM_setValue(TRACE_KEY, lookup ? { ...t, lookup } : t);
+      GM_setValue(
+        TRACE_KEY,
+        !res ? t : "lookup" in res ? { ...t, lookup: res.lookup } : { ...t, lookupError: res },
+      );
     } catch {
       /* ignore */
     }
@@ -156,15 +159,18 @@ export async function answerRefund(panel: HTMLElement, t: Trace, plan: string | 
     return handOver();
   }
   say(line("acs-muted", "Looking up the original charge in YNAB…"));
-  const res = await lookUpRefund(t, plan, token).catch((e: unknown) => ({ error: errMsg(e) }));
-  if (!("lookup" in res)) {
-    say(line("acs-warn", `${res.error} Your YNAB tab will try again.`));
-    return handOver();
-  }
-  say(...amazonAnswer(res.lookup, t));
-  $(".acs-caution", panel)?.replaceChildren(...cautions(res.lookup));
-  $(".acs-ynab", panel)?.replaceChildren(...amazonDetail(res.lookup));
-  handOver(res.lookup);
+  const res = await lookUpRefund(t, plan, token).catch((e: unknown): LookupResult => ({
+    error: errMsg(e),
+  }));
+  if ("lookup" in res) {
+    say(...amazonAnswer(res.lookup, t));
+    $(".acs-caution", panel)?.replaceChildren(...cautions(res.lookup));
+    $(".acs-ynab", panel)?.replaceChildren(...amazonDetail(res.lookup));
+  } else
+    say(
+      line("acs-warn", res.badToken ? `${res.error} Your YNAB tab asks for a new one.` : res.error),
+    );
+  handOver(res);
 }
 
 // Amazon's page can read the panel, so only categories and amounts from YNAB go on it: no

@@ -505,9 +505,34 @@ describe("the refund's category on the Amazon page", () => {
   test("a rejected token isn't forgotten or asked for on Amazon; the YNAB tab handles it", async () => {
     const p = await answerOnAmazon(() => ({ status: 401 }));
     expect(p.textContent).toMatch(/didn't accept the saved token/);
+    expect(p.textContent).not.toMatch(/try again/);
     expect(p.querySelector("form, input")).toBeNull();
     expect(gm.get(TOKEN_KEY)).toBe(FAKE_TOKEN);
     expect(handedOver().lookup).toBeUndefined();
+    // The YNAB tab forgets it and asks for a new one, without asking YNAB again.
+    const trace = handedOver();
+    document.body.innerHTML = "";
+    gm.reset();
+    openYnab(() => ok(planTxns()));
+    await handOver(trace);
+    expect(panelText()).toMatch(/didn't accept the saved token/);
+    expect(document.querySelector(".acs-token")).not.toBeNull();
+    expect(gm.get(TOKEN_KEY)).toBe("");
+    expect(gm.requests()).toHaveLength(0);
+  });
+
+  test("a rate limit on Amazon is shown in the YNAB tab, not asked again", async () => {
+    const p = await answerOnAmazon(() => ({ status: 429 }));
+    expect(p.textContent).toMatch(/YNAB is limiting requests/);
+    expect(p.textContent).not.toMatch(/will try again/);
+    const trace = handedOver();
+    document.body.innerHTML = "";
+    gm.reset();
+    openYnab(() => ok(planTxns()));
+    await handOver(trace);
+    expect(panelText()).toMatch(/YNAB is limiting requests/);
+    expect(gm.get(TOKEN_KEY)).toBe(FAKE_TOKEN);
+    expect(gm.requests()).toHaveLength(0);
   });
 
   test("the YNAB tab shows the Amazon tab's answer without asking YNAB again", async () => {
