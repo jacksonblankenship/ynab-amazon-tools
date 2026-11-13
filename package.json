@@ -1,6 +1,6 @@
 {
   "name": "ynab-amazon-tools",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Tools that make working with Amazon purchases in YNAB easier.",
   "license": "MIT",
