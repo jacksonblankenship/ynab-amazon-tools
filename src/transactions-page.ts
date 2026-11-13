@@ -167,10 +167,9 @@ export async function transactionsPage() {
       .flatMap((r) => r.orderIds.map((orderId) => ({ ...r, orderId })))
       .map((r) => {
         const day = toDay(r.date);
-        return {
-          ...r,
-          diff: targets.length && day != null ? distance(day) : 0,
-        };
+        // A row with no readable date can't be shown to be close, so it's left out.
+        const diff = !targets.length ? 0 : day == null ? Infinity : distance(day);
+        return { ...r, diff };
       })
       .filter((r) => r.diff <= 14)
       .sort((a, b) => a.diff - b.diff);
