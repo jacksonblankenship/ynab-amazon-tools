@@ -17,6 +17,7 @@ import { suite } from "./overlay.ts";
 import { refundHint, TRACE_KEY } from "./refund.ts";
 import { short } from "./render.ts";
 import type { Trace } from "./types.ts";
+import { AMAZON_PAYEE } from "./ynab-page.ts";
 
 const TOKEN_KEY = "ynab-token";
 /** A trace older than this is from an earlier refund lookup; don't show it. */
@@ -80,15 +81,19 @@ const ynabDay = (iso: string) => Math.round(Date.parse(`${iso}T00:00:00Z`) / DAY
 // YNAB usually dates a card charge a day or two after Amazon does.
 function findCharges(txns: YnabTxn[], c: Trace["charges"][number]) {
   const day = toDay(c.date);
-  const amazonish = (x: YnabTxn) => (/amazon|amzn/i.test(x.payee_name || "") ? 0 : 1);
-  // A transfer (say, a payment to an Amazon card) is never the order's charge. Once an
-  // Amazon charge matches, another store's charge of the same amount is a coincidence.
+  // Only Amazon's own charges: another store's charge of the same amount is a coincidence,
+  // and a transfer (say, a payment to an Amazon card) is never the order's charge.
   return txns
-    .filter((x) => !x.deleted && !x.transfer_account_id && x.amount === -c.amount * 10)
+    .filter(
+      (x) =>
+        !x.deleted &&
+        !x.transfer_account_id &&
+        x.amount === -c.amount * 10 &&
+        AMAZON_PAYEE.test(x.payee_name || ""),
+    )
     .map((x) => ({ x, d: day == null ? 0 : ynabDay(x.date) - day }))
     .filter((m) => m.d >= -3 && m.d <= 7)
-    .sort((a, b) => amazonish(a.x) - amazonish(b.x) || Math.abs(a.d) - Math.abs(b.d))
-    .filter((m, _, [best]) => !best || amazonish(m.x) === amazonish(best.x))
+    .sort((a, b) => Math.abs(a.d) - Math.abs(b.d))
     .map((m) => m.x);
 }
 
@@ -119,7 +124,7 @@ function describeMatch(
       nodes: [
         line(
           "acs-warn",
-          `No ${fmt(c.amount)} charge in YNAB within a week of ${c.date || "the Amazon date"}. It may be in another plan, or entered with a different amount.`,
+          `No ${fmt(c.amount)} Amazon charge in YNAB within a week of ${c.date || "the Amazon date"}. It may be in another plan, or entered with a different amount.`,
         ),
       ],
       cats: [],
