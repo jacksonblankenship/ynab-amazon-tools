@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.1](https://github.com/jacksonblankenship/ynab-amazon-tools/compare/v0.2.0...v0.2.1) (2026-11-13)
+
+
+### Bug Fixes
+
+* don't call unfound refund charges uncategorized ([d4fd36b](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/d4fd36bbbc2fcdd717a41aeff3a2d5f166646950))
+* don't match a transfer as a refund's original charge ([680d25a](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/680d25af021591f0ca4faaa46f74725e0056330d))
+* find a refund's original charge in an older plan ([3348dd7](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/3348dd7559a63ebb96a455203238cb18876bc471))
+* only match amazon payees as a refund's original charge ([58b3d7d](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/58b3d7d00f7fa738ca990d95f4602d80f763f802))
+* only offer amazon charges as a refund's other candidate ([b20605c](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/b20605c480c59042a18b70625693ea1c717d4794))
+* start the transaction cache afresh on a different amazon account ([1ad4b12](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/1ad4b120578c4a7fd6f2adfed6c2026dfa075431))
+* trace a refund that equals one of the order's charges ([ae25419](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/ae254197b71bf09019d01699d5972aecf58882b2))
+* write ynab dates in the refund panel the way people read them ([b4066e4](https://github.com/jacksonblankenship/ynab-amazon-tools/commit/b4066e411fd876c578cdde8917273891bdf70416))
+
 ## [0.2.0](https://github.com/jacksonblankenship/ynab-amazon-tools/compare/v0.1.0...v0.2.0) (2026-11-13)
 
 
