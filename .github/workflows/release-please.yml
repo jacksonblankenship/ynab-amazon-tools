@@ -13,3 +13,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: googleapis/release-please-action@v4
+        id: release
+
+      # When a release was just created, build the userscript and attach it. The file
+      # name stays the same across releases, so .../releases/latest/download/<name>
+      # always points at the newest version.
+      - if: ${{ steps.release.outputs.release_created }}
+        uses: actions/checkout@v7
+      - if: ${{ steps.release.outputs.release_created }}
+        uses: pnpm/action-setup@v6
+      - if: ${{ steps.release.outputs.release_created }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          # This job can write to the repo, so don't restore a cache it didn't build.
+          package-manager-cache: false
+      - if: ${{ steps.release.outputs.release_created }}
+        run: pnpm install --frozen-lockfile && pnpm build
+      - if: ${{ steps.release.outputs.release_created }}
+        run: gh release upload "${{ steps.release.outputs.tag_name }}" dist/amazon-charge-finder.user.js
+        env:
+          GH_TOKEN: ${{ github.token }}

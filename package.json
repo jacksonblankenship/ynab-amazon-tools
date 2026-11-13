@@ -21,5 +21,6 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
     "vite-plugin-monkey": "^8.1.1"
-  }
+  },
+  "packageManager": "pnpm@12.18.0"
 }
