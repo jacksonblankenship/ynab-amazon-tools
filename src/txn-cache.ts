@@ -67,6 +67,15 @@ export function remember(rows: Txn[]) {
   c.rows = [...byKey.values()]
     .sort((a, b) => (toDay(b.date) ?? 0) - (toDay(a.date) ?? 0))
     .slice(0, MAX_ROWS);
+  // Days whose rows were dropped are no longer seen in full, so stop claiming them.
+  if (byKey.size > MAX_ROWS) {
+    const days = c.rows.map((r) => toDay(r.date)).filter((d) => d != null);
+    const lo = days.length ? Math.min(...days) + 1 : today() + 1;
+    for (const list of ["all", "refunds"] as const)
+      c.covered[list] = c.covered[list]
+        .map(([a, b]): Span => [Math.max(a, lo), b])
+        .filter(([a, b]) => a <= b);
+  }
   store(c);
 }
 
