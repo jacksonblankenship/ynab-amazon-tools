@@ -46,6 +46,8 @@ export async function orderPage() {
   const top = Math.min(...cards.map((c) => c.getBoundingClientRect().top));
   if (Number.isFinite(top)) window.scrollTo({ top: window.scrollY + top - 16 });
   overlayDone(shown.panel, shown.landed);
+  // Closed, it can still be looked at again, as the whole order.
+  launcher(parsed, shown.panel);
 }
 
 /** Load the order's charges and show what they paid for: the one asked about, or all of them. */
@@ -88,9 +90,10 @@ async function match(parsed: ParsedOrder, focus: Focus | null): Promise<Shown> {
         ? "This order has too many charges to check every combination. The match below is the best found, not guaranteed. Double-check it against your statement."
         : "This order has too many charges to check every combination, so no match was found. Match the charges to deliveries manually.",
     );
-  } else if (charges.length && (!solution || solution.assign.some((g) => g < 0))) {
+  } else if (charges.length && !solution) {
+    // Partly matched orders list their unmatched charges with the reason instead.
     warnings.push(
-      "Some charges didn't match a delivery cleanly (item-specific coupons or a partial refund can cause this). Unmatched amounts are flagged.",
+      "The charges don't add up to the deliveries cleanly (item-specific coupons or a partial refund can cause this).",
     );
   }
   // A refund often equals one of the order's charges; it's still the refund being traced.
@@ -132,24 +135,30 @@ async function match(parsed: ParsedOrder, focus: Focus | null): Promise<Shown> {
   );
 }
 
-/** A small button floating over the page that matches the order's charges when pressed. */
-function launcher(parsed: ParsedOrder) {
+/**
+ * A small button floating over the page that matches the order's charges when pressed.
+ * Kept out of sight while `panel` is open.
+ */
+function launcher(parsed: ParsedOrder, panel?: HTMLElement) {
   const b = el("button", "acs-launch", `${searchIcon(14)}<span>Match charges to items</span>`);
   b.type = "button";
   document.body.appendChild(b);
+  const hideWhile = (p: HTMLElement) => {
+    b.hidden = true;
+    new MutationObserver((_, mo) => {
+      if (p.isConnected) return;
+      mo.disconnect();
+      b.hidden = false;
+    }).observe(document.body, { childList: true });
+  };
+  if (panel) hideWhile(panel);
   b.addEventListener("click", async () => {
     b.disabled = true;
     b.classList.add("acs-busy");
     try {
       const shown = await match(parsed, null);
-      b.hidden = true;
+      hideWhile(shown.panel);
       shown.landed();
-      // Back once the panel is closed, for another look.
-      new MutationObserver((_, mo) => {
-        if (shown.panel.isConnected) return;
-        mo.disconnect();
-        b.hidden = false;
-      }).observe(document.body, { childList: true });
     } catch (e) {
       overlayStop("Something went wrong", errMsg(e), [], { report: true });
     } finally {

@@ -118,6 +118,15 @@ export function renderOrder(order: Order, result: RenderResult, lead: Node[] = [
       ),
     );
 
+  const unmatched = charges.filter((_, j) => (solution?.assign[j] ?? -1) < 0);
+  if (unmatched.length)
+    body.push(
+      el(
+        "div",
+        "acs-warn",
+        `Not matched to a delivery: ${unmatched.map((c) => `${chargeLabel(c)} · ${esc(c.method)}`).join(", ")}. Item-specific coupons or a partial refund can cause this.`,
+      ),
+    );
   const charged = new Set<number>();
   const sections: { first: number; node: HTMLElement }[] = [];
   solution?.groups.forEach((g, gi) => {
@@ -159,17 +168,13 @@ export function renderOrder(order: Order, result: RenderResult, lead: Node[] = [
       nodes.push(splitTable(split, false));
     sections.push({ first: i, node: section([sh.box], dn([i]), nodes) });
   });
-  body.push(...sections.sort((a, b) => a.first - b.first).map((s) => s.node));
-
-  const unmatched = charges.filter((_, j) => (solution?.assign[j] ?? -1) < 0);
-  if (unmatched.length)
-    body.push(
-      el(
-        "div",
-        "acs-warn",
-        `Not matched to a delivery: ${unmatched.map((c) => `${chargeLabel(c)} · ${esc(c.method)}`).join(", ")}`,
-      ),
+  if (solution?.ambiguous)
+    warnings.push(
+      "More than one way to match these charges fits the totals. Double-check the deliveries with similar amounts.",
     );
+  for (const w of warnings) body.push(el("div", "acs-warn", esc(w)));
+  if (changed) body.push(reportLine(suite, "acs-warn", CHANGED));
+  body.push(...sections.sort((a, b) => a.first - b.first).map((s) => s.node));
   if (!charges.length && !error)
     body.push(
       el("div", "acs-muted", "No card charges yet. Amazon charges when each delivery ships."),
@@ -190,12 +195,7 @@ export function renderOrder(order: Order, result: RenderResult, lead: Node[] = [
         `Refunds: ${refunds.map((c) => `${fmt(c.amount)} on ${esc(c.date)} to ${esc(c.method)}`).join(", ")}`,
       ),
     );
-  if (solution?.ambiguous)
-    warnings.push(
-      "More than one way to match these charges fits the totals. Double-check the deliveries with similar amounts.",
-    );
-  for (const w of warnings) body.push(el("div", "acs-warn", esc(w)));
-  if (changed) body.push(reportLine(suite, "acs-warn", CHANGED));
+
   if (order.orderId)
     body.push(
       el(

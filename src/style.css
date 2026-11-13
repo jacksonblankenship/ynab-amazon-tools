@@ -116,7 +116,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: #191818;
+  color: #475afa;
   font: inherit;
   font-size: 15px;
   font-weight: 700;
@@ -128,9 +128,10 @@
 .acs-more {
   margin-top: 10px;
 }
+/* Bottom-left: Amazon's cart sidebar takes the right edge. */
 .acs-launch {
   position: fixed;
-  right: 16px;
+  left: 16px;
   bottom: 16px;
   z-index: 2147483645;
   display: flex;
