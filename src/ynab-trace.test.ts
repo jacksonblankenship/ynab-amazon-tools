@@ -168,6 +168,25 @@ describe("the refund's original charge and category", () => {
     expect(advice()).toBe("Put $68.64 back in Baby.");
   });
 
+  test("an uncategorized split line that also matches doesn't hide the categorized one", async () => {
+    const split = {
+      category_name: "Split",
+      subtransactions: [
+        { amount: -68640, category_name: "Baby", deleted: false },
+        { amount: -10000, category_name: null, deleted: false },
+        { amount: -1440, category_name: "Household", deleted: false },
+      ],
+    };
+    const txns = planTxns(byId(AUG_21, split)).filter((t) => t.id !== AUG_23);
+    openYnab(() => ok(txns));
+    // The $10.00 line matches one refunded item's share, but has no category to name.
+    await handOver({
+      ...refundTrace(),
+      itemSets: [[{ title: "Cable", units: 1, amount: 1000 }]],
+    });
+    expect(advice()).toBe("Put $68.64 back in Baby.");
+  });
+
   test("a split charge with no line matching the refund lists each category", async () => {
     const split = {
       category_name: "Split",

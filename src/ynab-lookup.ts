@@ -249,10 +249,15 @@ export function refundAnswer(
     ...(f.alt?.categories ?? []),
   ]);
   // A split line that matches the refund is the answer, unless lines in different categories
-  // do, or a second same-amount charge leaves the original in doubt.
+  // do, or a second same-amount charge leaves the original in doubt. An uncategorized line
+  // names nothing, so it doesn't count.
   const hits = found.some((f) => f.alt)
     ? []
-    : [...new Set(found.flatMap((f) => f.lines.filter((x) => x.hit).map((x) => x.category)))];
+    : [
+        ...new Set(
+          found.flatMap((f) => f.lines.filter((x) => x.hit && x.category).map((x) => x.category)),
+        ),
+      ];
   const all = hits.length === 1 ? hits : [...new Set(cats.filter(Boolean))];
   const [one] = all;
   if (!one) return { warn: "None of these charges are categorized in YNAB yet." };
