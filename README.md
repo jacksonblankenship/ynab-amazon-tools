@@ -19,7 +19,8 @@
   click the search icon. You land on the Amazon order that charge paid for, with
   the items it covered highlighted.
 - **Split-ready amounts.** When Amazon bills one order as several charges, it
-  shows which charge paid for which items, tax and shipping included. On any
+  shows which charge paid for which items, tax and shipping included. Click an
+  amount to copy it for your split in YNAB. On any
   order page, **Match charges to items** shows this for the whole order.
 - **Refunds in the right category.** Click the search icon on a refund. The
   Amazon page tells you which YNAB category it goes back to, and names the one

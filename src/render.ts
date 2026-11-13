@@ -36,6 +36,32 @@ export const card = (box: Element) => {
   return c && $$('[data-component="shipmentStatus"]', c).length === 1 ? c : box;
 };
 
+/**
+ * On click, put `text` on the clipboard and say so on the button for a moment. Only the
+ * clipboard: nothing is written to Amazon or YNAB.
+ */
+function copyOnClick(b: HTMLButtonElement, text: string) {
+  const label = b.textContent;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  b.addEventListener("click", async () => {
+    let ok = true;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      ok = false;
+    }
+    b.textContent = ok ? "Copied" : "Couldn't copy";
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      b.textContent = label;
+    }, 1500);
+  });
+}
+
+/** An amount that copies itself, bare ("1234.56"), the way YNAB takes it. */
+const amountButton = (c: number) =>
+  `<button type="button" class="acs-copy" aria-live="polite" aria-label="Copy ${fmt(c)}" data-copy="${(c / 100).toFixed(2)}">${fmt(c)}</button>`;
+
 /** The amounts each item came to; `head`, if any, says which charge they're for. */
 function splitTable(split: Split, head: string | null) {
   const box = el("div", "acs-split");
@@ -43,16 +69,19 @@ function splitTable(split: Split, head: string | null) {
   const rows = split.lines
     .map(
       (l) =>
-        `<tr><td>${esc(short(l.item.title))}${l.item.qty > 1 ? ` <span class="acs-muted">×${l.item.qty}</span>` : ""}</td><td class="acs-r">${fmt(l.amount)}</td></tr>`,
+        `<tr><td>${esc(short(l.item.title))}${l.item.qty > 1 ? ` <span class="acs-muted">×${l.item.qty}</span>` : ""}</td><td class="acs-r">${amountButton(l.amount)}</td></tr>`,
     )
     .join("");
   box.appendChild(
     el(
       "table",
       null,
-      `${rows}<tr class="acs-tot"><td>Total</td><td class="acs-r">${fmt(split.charge.amount)}</td></tr>`,
+      `${rows}<tr class="acs-tot"><td>Total</td><td class="acs-r">${amountButton(split.charge.amount)}</td></tr>`,
     ),
   );
+  $$<HTMLButtonElement>("button.acs-copy", box).forEach((b) => {
+    copyOnClick(b, b.dataset["copy"] ?? "");
+  });
   return box;
 }
 
@@ -300,7 +329,15 @@ export function renderFocus(
     body.push(
       line("acs-answer", `${short(one.item.title)}${one.item.qty > 1 ? ` ×${one.item.qty}` : ""}`),
     );
-  else body.push(splitTable(split, null));
+  else {
+    body.push(splitTable(split, null));
+    // The item names, for the memo of a split line or the whole transaction.
+    const memo = el("button", "acs-memo");
+    memo.type = "button";
+    memo.textContent = "Copy memo";
+    copyOnClick(memo, split.lines.map((l) => short(l.item.title)).join(", "));
+    body.push(memo);
+  }
   if (absorbed > 0) body.push(line("acs-muted", paidLess(solution, gi)));
   if (!split.exact)
     body.push(

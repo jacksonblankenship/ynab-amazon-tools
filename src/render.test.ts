@@ -1,6 +1,6 @@
 // The order page's panels: what they lead with, and what waits behind "How it matched".
 // Orders are built by hand so each case (one item, several charges, points) is exact.
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { renderFocus, renderOrder } from "./render.ts";
 import type { Focus, Order, PricedItem, Solution, Txn } from "./types.ts";
 
@@ -184,6 +184,93 @@ describe("the single-charge panel", () => {
     const { order: o, solve } = order([[diapers, wipes]], 0);
     const charges = [charge(2732, "January 4, 2026")];
     expect(renderFocus(o, charges, solve(charges), { ...focus, amount: 999 })).toBeNull();
+  });
+});
+
+describe("copying amounts for a split", () => {
+  /** A clipboard that records what's written, or refuses every write. */
+  function clipboard(refuse = false) {
+    const written: string[] = [];
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (t: string) => {
+          if (refuse) throw new Error("denied");
+          written.push(t);
+        },
+      },
+    });
+    return written;
+  }
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const panel = () => {
+    const { order: o, solve } = order([[diapers, wipes]], 0);
+    const charges = [charge(2732, "January 4, 2026")];
+    return renderFocus(o, charges, solve(charges), focus)?.panel as HTMLElement;
+  };
+  const button = (p: HTMLElement, name: RegExp) => {
+    const b = Array.from(p.querySelectorAll("button")).find((x) =>
+      name.test(x.getAttribute("aria-label") ?? x.textContent),
+    );
+    if (!b) throw new Error(`no button ${name}`);
+    return b;
+  };
+
+  test("each item amount and the total is a button that copies the bare amount", async () => {
+    const written = clipboard();
+    vi.useFakeTimers();
+    const p = panel();
+    for (const name of [/\$10\.00/, /\$17\.32/, /\$27\.32/]) {
+      const b = button(p.querySelector(".acs-split") as HTMLElement, name);
+      expect(b.type).toBe("button");
+      b.click();
+      await vi.waitFor(() => {
+        expect(b.textContent).toMatch(/copied/i);
+      });
+    }
+    expect(written).toEqual(["10.00", "17.32", "27.32"]);
+    // The confirmation is brief: the amount comes back.
+    await vi.runAllTimersAsync();
+    expect(button(p, /\$17\.32/).textContent).toBe("$17.32");
+  });
+
+  test("amounts over a thousand copy without the comma", async () => {
+    const written = clipboard();
+    const { order: o, solve } = order([[item("Sofa", 123456)]], 0);
+    const charges = [charge(123456, "January 4, 2026")];
+    const p = renderOrder(o, {
+      charges,
+      credits: [],
+      refunds: [],
+      solution: solve(charges),
+      warnings: [],
+      error: null,
+      changed: false,
+    }).panel;
+    button(p, /Total|\$1,234\.56/).click();
+    await vi.waitFor(() => {
+      expect(written).toEqual(["1234.56"]);
+    });
+  });
+
+  test("copy memo writes the item names only", async () => {
+    const written = clipboard();
+    button(panel(), /memo/i).click();
+    await vi.waitFor(() => {
+      expect(written).toEqual(["Huggies Size 3 Diapers, Clorox Wipes, 3 pack"]);
+    });
+  });
+
+  test("a refused copy says so instead of claiming it worked", async () => {
+    clipboard(true);
+    const b = button(panel(), /\$17\.32/);
+    b.click();
+    await vi.waitFor(() => {
+      expect(b.textContent).toMatch(/couldn't/i);
+    });
   });
 });
 

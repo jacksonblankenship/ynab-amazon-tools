@@ -69,6 +69,41 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+/* Amounts copy on click, so they read as amounts with a hint, not as buttons. */
+.acs-result button.acs-copy {
+  margin: -1px -4px;
+  padding: 1px 4px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: copy;
+}
+.acs-result button.acs-copy:hover {
+  background: #f0f0ff;
+  color: #3a40d9;
+}
+.acs-result button.acs-memo {
+  margin: 6px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #475afa;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: copy;
+}
+.acs-result button.acs-memo:hover {
+  text-decoration: underline;
+}
+.acs-result button.acs-copy:focus-visible,
+.acs-result button.acs-memo:focus-visible {
+  outline: 2px solid #545bfe;
+  outline-offset: 1px;
+}
 .acs-split tr.acs-tot td {
   padding-top: 6px;
   border-top: 1px solid #f3eee2;
