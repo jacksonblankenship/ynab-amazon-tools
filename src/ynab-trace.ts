@@ -38,6 +38,18 @@ interface YnabTxn extends YnabSub {
   transfer_account_id?: string | null;
   subtransactions?: YnabSub[];
 }
+interface YnabPlan {
+  id: string;
+  name: string;
+  first_month?: string | null;
+  last_month?: string | null;
+  last_modified_on?: string | null;
+}
+/** Where a charge was found, when it wasn't the plan this tab is on. */
+interface Elsewhere {
+  id: string;
+  name: string;
+}
 
 function isTrace(v: unknown): v is Trace {
   if (typeof v !== "object" || v === null) return false;
@@ -117,6 +129,7 @@ function describeMatch(
   matches: YnabTxn[],
   t: Trace,
   plan: string | undefined,
+  other?: Elsewhere,
 ): { nodes: HTMLElement[]; cats: string[] } {
   const [x, alt] = matches;
   if (!x)
@@ -133,15 +146,16 @@ function describeMatch(
   const lines: YnabSub[] = subs.length ? subs : [x];
   const hits = subs.length ? refundLines(subs, t) : [];
   const box = el("div", "acs-split");
+  const home = other?.id ?? plan;
   const account =
-    plan && x.account_id
-      ? `<a href="/${esc(plan)}/accounts/${esc(x.account_id)}">${esc(x.account_name || "account")}</a>`
+    home && x.account_id
+      ? `<a href="/${esc(home)}/accounts/${esc(x.account_id)}">${esc(x.account_name || "account")}</a>`
       : esc(x.account_name || "");
   box.appendChild(
     el(
       "div",
       null,
-      `<b>${fmt(c.amount)}</b> on ${esc(readableDates([x.date]))} · ${account}${subs.length ? " · split" : ""}`,
+      `<b>${fmt(c.amount)}</b> on ${esc(readableDates([x.date]))} · ${account}${subs.length ? " · split" : ""}${other ? ` · in your <b>${esc(other.name)}</b> plan` : ""}`,
     ),
   );
   const rows = lines
@@ -250,9 +264,14 @@ async function fillTrace(body: HTMLElement, t: Trace): Promise<void> {
     return say(line("acs-warn", `YNAB answered with an error (${res.status}).`));
   // A good answer in a shape this script doesn't know: YNAB changed its API.
   if (!txns) return say(reportLine(suite, "acs-warn", "Couldn't read YNAB's answer."));
-  const found = t.charges.map((c) => {
-    const matches = findCharges(txns, c);
-    return { matched: matches.length > 0, ...describeMatch(c, matches, t, plan) };
+  const matches = t.charges.map((c) => findCharges(txns, c));
+  // After a fresh start the order's charges can be in the old plan; only then look there.
+  const missing = t.charges.filter((_, i) => !matches[i]?.length);
+  const other = await searchOtherPlans(missing, plan, since, token);
+  const found = t.charges.map((c, i) => {
+    const elsewhere = other.found.get(c);
+    const m = elsewhere?.m ?? matches[i] ?? [];
+    return { matched: m.length > 0, ...describeMatch(c, m, t, plan, elsewhere?.p) };
   });
   say(
     line(
@@ -260,6 +279,14 @@ async function fillTrace(body: HTMLElement, t: Trace): Promise<void> {
       `The original order's ${found.length > 1 ? `${found.length} charges` : "charge"} in YNAB:`,
     ),
     ...found.flatMap((f) => f.nodes),
+    ...(other.limited
+      ? [
+          line(
+            "acs-warn",
+            "YNAB is limiting requests, so other plans weren't checked. Try again later.",
+          ),
+        ]
+      : []),
     // With no charge found, "not categorized yet" would be wrong; the warning above says why.
     ...(found.some((f) => f.matched)
       ? categorySummary(
@@ -268,6 +295,58 @@ async function fillTrace(body: HTMLElement, t: Trace): Promise<void> {
         )
       : []),
   );
+}
+
+// The user's other plans that could hold these charges, newest first: a plan that began after
+// a charge can't have it. At most two, to keep a miss from costing many requests.
+async function searchOtherPlans(
+  charges: Trace["charges"],
+  current: string | undefined,
+  since: string,
+  token: string,
+) {
+  const found = new Map<Trace["charges"][number], { m: YnabTxn[]; p: Elsewhere }>();
+  if (!charges.length) return { found, limited: false };
+  try {
+    const res = await ynabGet("/plans", token);
+    if (res.status === 429) return { found, limited: true };
+    const months = charges.map((c) => toDay(c.date)).filter((d) => d != null);
+    const first = months.length
+      ? new Date(Math.min(...months) * DAY).toISOString().slice(0, 7)
+      : null;
+    const last = months.length
+      ? new Date(Math.max(...months) * DAY).toISOString().slice(0, 7)
+      : null;
+    const plans = (plansIn(res.body) ?? [])
+      .filter(
+        (p) =>
+          p.id !== current &&
+          (!first || !p.last_month || p.last_month.slice(0, 7) >= first) &&
+          (!last || !p.first_month || p.first_month.slice(0, 7) <= last),
+      )
+      .sort((a, b) => (b.last_modified_on ?? "").localeCompare(a.last_modified_on ?? ""))
+      .slice(0, 2);
+    for (const p of plans) {
+      if (charges.every((c) => found.has(c))) break;
+      const r = await ynabGet(`/plans/${p.id}/transactions?since_date=${since}`, token);
+      if (r.status === 429) return { found, limited: true };
+      const txns = r.status === 200 ? transactionsIn(r.body) : null;
+      for (const c of charges) {
+        const m = txns && !found.has(c) ? findCharges(txns, c) : [];
+        if (m.length) found.set(c, { m, p: { id: p.id, name: p.name } });
+      }
+    }
+  } catch {
+    /* another plan is a bonus; the charge just stays "not found" */
+  }
+  return { found, limited: false };
+}
+
+function plansIn(body: unknown): YnabPlan[] | null {
+  if (typeof body !== "object" || body === null || !("data" in body)) return null;
+  const { data } = body;
+  if (typeof data !== "object" || data === null || !("plans" in data)) return null;
+  return Array.isArray(data.plans) ? data.plans : null;
 }
 
 /** `data.transactions` from a YNAB answer, trusted to be YNAB's documented shape. */
