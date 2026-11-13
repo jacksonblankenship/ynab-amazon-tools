@@ -37,20 +37,29 @@ export const card = (box: Element) => {
 };
 
 /**
- * On click, put `text` on the clipboard and say so on the button for a moment. Only the
- * clipboard: nothing is written to Amazon or YNAB.
+ * On click, put `text` on the clipboard and say so on the button for a moment, and to screen
+ * readers through the panel's polite status line. Only the clipboard: nothing is written to
+ * Amazon or YNAB.
  */
 function copyOnClick(b: HTMLButtonElement, text: string) {
   const label = b.textContent;
   let timer: ReturnType<typeof setTimeout> | undefined;
   b.addEventListener("click", async () => {
+    // One per panel, put on the page empty before it says anything, so the change is heard.
+    const host = b.closest(".acs-result") ?? document.body;
+    let live = host.querySelector<HTMLElement>(".acs-live");
+    if (!live) {
+      live = host.appendChild(el("span", "acs-live"));
+      live.setAttribute("role", "status");
+    }
+    live.textContent = "";
     let ok = true;
     try {
       await navigator.clipboard.writeText(text);
     } catch {
       ok = false;
     }
-    b.textContent = ok ? "Copied" : "Couldn't copy";
+    b.textContent = live.textContent = ok ? "Copied" : "Couldn't copy";
     clearTimeout(timer);
     timer = setTimeout(() => {
       b.textContent = label;
@@ -60,7 +69,7 @@ function copyOnClick(b: HTMLButtonElement, text: string) {
 
 /** An amount that copies itself, bare ("1234.56"), the way YNAB takes it. */
 const amountButton = (c: number) =>
-  `<button type="button" class="acs-copy" aria-live="polite" aria-label="Copy ${fmt(c)}" data-copy="${(c / 100).toFixed(2)}">${fmt(c)}</button>`;
+  `<button type="button" class="acs-copy" aria-label="Copy ${fmt(c)}" data-copy="${(c / 100).toFixed(2)}">${fmt(c)}</button>`;
 
 /** The amounts each item came to; `head`, if any, says which charge they're for. */
 function splitTable(split: Split, head: string | null) {

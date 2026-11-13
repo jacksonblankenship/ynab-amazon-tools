@@ -273,6 +273,23 @@ describe("copying amounts for a split", () => {
       expect(b.textContent).toMatch(/couldn't/i);
     });
   });
+
+  test.each([
+    ["a copy", false, "Copied"],
+    ["a refused copy", true, "Couldn't copy"],
+  ])("screen readers hear how %s went", async (_name, refuse, said) => {
+    clipboard(refuse);
+    const p = panel();
+    document.body.append(p);
+    for (const b of [button(p, /\$17\.32/), button(p, /memo/i)]) {
+      b.click();
+      await vi.waitFor(() => {
+        expect(p.querySelector('[role="status"]')?.textContent).toBe(said);
+      });
+    }
+    // One polite region for the panel, not one per button.
+    expect(p.querySelectorAll('[role="status"]')).toHaveLength(1);
+  });
 });
 
 describe("the whole-order panel", () => {

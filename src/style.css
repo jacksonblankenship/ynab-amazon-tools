@@ -103,6 +103,15 @@
 .acs-result button.acs-memo:hover {
   text-decoration: underline;
 }
+/* Heard by screen readers, not seen: the visible "Copied" is on the button itself. */
+.acs-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .acs-result button.acs-copy:focus-visible,
 .acs-result button.acs-memo:focus-visible {
   outline: 2px solid #545bfe;
