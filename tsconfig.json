@@ -1,0 +1,12 @@
+{
+  // The userscript runs in the browser under Tampermonkey, so this types src/ against the
+  // DOM only: the Bun preset's ESNext-only lib and Bun globals are swapped out. GM_* APIs
+  // are imported from "$" (see src/vite-env.d.ts). Bun's preset comes first so strictest's
+  // stricter flags win where they overlap.
+  "extends": ["@tsconfig/bun/tsconfig.json", "@tsconfig/strictest/tsconfig.json"],
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": []
+  },
+  "include": ["src"]
+}

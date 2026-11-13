@@ -1,0 +1,128 @@
+/*
+ * The full order breakdown (a banner per delivery, a panel for the order), in the
+ * suite's look. The button, overlay and single-charge panel come from src/lib/suite.css,
+ * which also defines the acs-fadeup animation used here.
+ */
+.acs-panel,
+.acs-banner {
+  box-sizing: border-box;
+  margin: 0 0 14px;
+  padding: 14px 20px;
+  background: #fff;
+  border: 1px solid #ece7da;
+  border-radius: 14px;
+  box-shadow:
+    0 1px 2px rgb(25 24 24 / 6%),
+    0 6px 20px rgb(25 24 24 / 7%);
+  font:
+    400 14px / 1.45 Figtree,
+    -apple-system,
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+  color: #191818;
+  text-align: left;
+  animation: acs-fadeup 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.acs-h {
+  margin-bottom: 4px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.acs-amt {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.acs-muted {
+  color: #51504d;
+  font-size: 13px;
+}
+.acs-warn {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #fdf3cf;
+  color: #6d5600;
+  font-size: 13px;
+}
+.acs-split {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #f3eee2;
+}
+.acs-split table {
+  width: 100%;
+  margin: 4px 0 0;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.acs-split td {
+  padding: 2px 0;
+  border: 0;
+  vertical-align: top;
+}
+.acs-split td.acs-r {
+  padding-left: 12px;
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.acs-split tr.acs-tot td {
+  padding-top: 6px;
+  border-top: 1px solid #f3eee2;
+  font-weight: 700;
+}
+.acs-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.acs-panel a {
+  /* biome-ignore lint/complexity/noImportantStyles: has to beat the host page's own link styles */
+  color: #475afa !important;
+}
+.acs-foot {
+  margin: 12px -20px -14px;
+  padding: 10px 20px;
+  border-top: 1px solid #f3eee2;
+  font-size: 11px;
+  color: #696763;
+}
+.acs-result .acs-split:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.acs-split tr.acs-hit td {
+  font-weight: 700;
+  color: #3a40d9;
+}
+.acs-put {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #f0f0ff;
+  font-weight: 600;
+}
+.acs-token {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.acs-token input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #dbd7cc;
+  border-radius: 8px;
+  font: inherit;
+}
+.acs-token button {
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #545bfe;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}

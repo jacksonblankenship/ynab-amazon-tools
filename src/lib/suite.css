@@ -1,0 +1,563 @@
+/*
+ * The suite's shared look: the YNAB button, the loading overlay and the result panel.
+ * `pfx-` is replaced with the script's own prefix when suite-style.ts injects this, so
+ * two scripts on one page never share a rule. Colors are YNAB's own; on YNAB the button
+ * reads YNAB's theme variables, so it follows light and dark mode.
+ */
+
+/* ---- YNAB button ---- */
+
+.pfx-yn {
+  position: fixed;
+  z-index: 99999;
+  display: none;
+  width: 26px;
+  height: 26px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  background: var(--actionPrimary, #545bfe);
+  color: var(--backgroundPrimary, #fff);
+  box-shadow:
+    0 1px 2px rgb(12 13 34 / 18%),
+    0 2px 6px rgb(84 91 254 / 28%);
+  cursor: pointer;
+  transition:
+    transform 160ms cubic-bezier(0.3, 1.4, 0.6, 1),
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+.pfx-yn:hover {
+  transform: scale(1.1);
+  box-shadow:
+    0 2px 4px rgb(12 13 34 / 18%),
+    0 6px 14px rgb(84 91 254 / 36%);
+}
+.pfx-yn:focus-visible {
+  outline: 2px solid var(--actionPrimary, #545bfe);
+  outline-offset: 2px;
+}
+.pfx-yn.pfx-pop {
+  animation: pfx-pop 200ms cubic-bezier(0.3, 1.5, 0.6, 1) both;
+}
+.pfx-yn.pfx-press {
+  transform: scale(0.88);
+}
+.pfx-yn.pfx-press::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: inherit;
+  pointer-events: none;
+  animation: pfx-ripple 520ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+.pfx-yn-tip {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translate(4px, -50%);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--labelPrimary, #191818);
+  color: var(--backgroundPrimary, #fff);
+  font:
+    600 12px / 1.3 Figtree,
+    Helvetica,
+    Arial,
+    sans-serif;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+.pfx-yn:hover .pfx-yn-tip,
+.pfx-yn:focus-visible .pfx-yn-tip {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+
+/* ---- Loading overlay ---- */
+
+#pfx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 20vh;
+  box-sizing: border-box;
+  font:
+    400 14px / 1.45 Figtree,
+    -apple-system,
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+  color: #191818;
+  text-align: left;
+  letter-spacing: normal;
+}
+.pfx-ov-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(248 246 242 / 94%);
+  backdrop-filter: blur(6px);
+  transition: opacity 380ms ease;
+}
+#pfx-overlay.pfx-out .pfx-ov-backdrop {
+  opacity: 0;
+}
+#pfx-overlay.pfx-out {
+  pointer-events: none;
+}
+.pfx-ov-card {
+  position: relative;
+  width: 400px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  padding: 32px 32px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #ece7da;
+  border-radius: 18px;
+  box-shadow:
+    0 2px 4px rgb(25 24 24 / 4%),
+    0 18px 48px rgb(25 24 24 / 12%);
+  animation: pfx-rise 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.pfx-ov-card.pfx-static {
+  animation: none;
+}
+#pfx-overlay.pfx-out:not(.pfx-docking) .pfx-ov-card {
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 260ms ease,
+    transform 260ms ease;
+}
+.pfx-ov-card.pfx-dock {
+  position: fixed;
+  margin: 0;
+  overflow: hidden;
+  animation: none;
+  transition:
+    top 560ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    left 560ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    width 560ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 560ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-radius 560ms ease,
+    opacity 200ms ease 380ms;
+}
+.pfx-ov-card.pfx-dock > * {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.pfx-ov-icon {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex: none;
+}
+.pfx-ov-icon svg {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+.pfx-i-spin .pfx-arc {
+  transform-origin: 24px 24px;
+  animation: pfx-spin 900ms linear infinite;
+}
+.pfx-i-check circle,
+.pfx-i-stop {
+  transform-origin: 24px 24px;
+  animation: pfx-pop 260ms cubic-bezier(0.3, 1.5, 0.6, 1) both;
+}
+.pfx-i-check path {
+  stroke-dasharray: 26;
+  animation: pfx-draw 320ms cubic-bezier(0.6, 0, 0.4, 1) 120ms both;
+}
+.pfx-ov-icon .pfx-i-spin {
+  display: block;
+}
+#pfx-overlay.pfx-found .pfx-i-spin,
+#pfx-overlay.pfx-stopped .pfx-i-spin,
+#pfx-overlay.pfx-stopped .pfx-i-check {
+  display: none;
+}
+#pfx-overlay.pfx-found .pfx-i-check {
+  display: block;
+}
+#pfx-overlay.pfx-stopped .pfx-i-stop {
+  display: block;
+}
+.pfx-ov-icon.pfx-static .pfx-i-check circle,
+.pfx-ov-icon.pfx-static .pfx-i-check path {
+  animation: none;
+}
+
+.pfx-ov-msg {
+  margin-top: 16px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  color: #191818;
+}
+.pfx-ov-sub {
+  margin-top: 6px;
+  font-size: 13px;
+  text-align: center;
+  color: #51504d;
+}
+.pfx-ov-sub:empty,
+.pfx-ov-steps:empty,
+.pfx-ov-extra:empty {
+  display: none;
+}
+.pfx-fade {
+  animation: pfx-fadeup 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+#pfx-overlay .pfx-ov-steps {
+  width: 100%;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+#pfx-overlay .pfx-ov-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 26px;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+  color: #51504d;
+  animation: pfx-fadeup 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition: color 200ms ease;
+}
+#pfx-overlay .pfx-ov-step.pfx-static {
+  animation: none;
+}
+#pfx-overlay .pfx-ov-step.pfx-active {
+  color: #191818;
+}
+.pfx-ov-dot {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 200ms ease;
+}
+.pfx-ov-dot svg {
+  display: none;
+}
+.pfx-active .pfx-ov-dot {
+  width: 12px;
+  height: 12px;
+  margin: 2px;
+  border: 2px solid #e2e3ff;
+  border-top-color: #545bfe;
+  animation: pfx-spin 800ms linear infinite;
+}
+.pfx-done .pfx-ov-dot {
+  background: #545bfe;
+}
+.pfx-done .pfx-ov-dot .pfx-d-check,
+.pfx-miss .pfx-ov-dot .pfx-d-miss {
+  display: block;
+}
+.pfx-miss .pfx-ov-dot {
+  background: #f3eee2;
+}
+
+.pfx-ov-extra {
+  width: 100%;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#pfx-overlay a.pfx-choice {
+  display: block;
+  padding: 10px 14px;
+  border: 1px solid #dbd7cc;
+  border-radius: 10px;
+  background: #fff;
+  /* biome-ignore lint/complexity/noImportantStyles: has to beat the host page's own link styles */
+  color: #191818 !important;
+  /* biome-ignore lint/complexity/noImportantStyles: has to beat the host page's own link styles */
+  text-decoration: none !important;
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+#pfx-overlay a.pfx-choice:hover {
+  border-color: #545bfe;
+  background: #f0f0ff;
+}
+.pfx-choice-detail {
+  display: block;
+  margin-top: 2px;
+  font-weight: 400;
+  color: #51504d;
+}
+#pfx-overlay button.pfx-close {
+  align-self: center;
+  margin: 4px 0 0;
+  height: 36px;
+  padding: 0 18px;
+  border: 1px solid #dbd7cc;
+  border-radius: 999px;
+  background: #fff;
+  color: #191818;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    transform 140ms ease;
+}
+#pfx-overlay button.pfx-close:hover {
+  background: #f8f6f2;
+}
+#pfx-overlay button.pfx-close:active {
+  transform: scale(0.97);
+}
+.pfx-ov-foot {
+  margin-top: 22px;
+  font-size: 11px;
+  text-wrap: balance;
+  text-align: center;
+  color: #696763;
+}
+
+/* ---- Result panel ---- */
+
+.pfx-result {
+  box-sizing: border-box;
+  margin: 0 0 14px;
+  background: #fff;
+  border: 1px solid #ece7da;
+  border-radius: 14px;
+  box-shadow:
+    0 1px 2px rgb(25 24 24 / 6%),
+    0 6px 20px rgb(25 24 24 / 7%);
+  font:
+    400 14px / 1.45 Figtree,
+    -apple-system,
+    "Segoe UI",
+    system-ui,
+    sans-serif;
+  color: #191818;
+  text-align: left;
+  animation: pfx-fadeup 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition:
+    opacity 200ms ease,
+    transform 200ms ease;
+}
+.pfx-result.pfx-floating {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 2147483646;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  margin: 0;
+}
+.pfx-result.pfx-landing {
+  opacity: 0;
+  animation: none;
+}
+.pfx-result.pfx-landing.pfx-landed {
+  opacity: 1;
+  transition: opacity 280ms ease;
+}
+.pfx-result.pfx-gone {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+.pfx-r-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 10px 0 20px;
+}
+.pfx-mark {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #545bfe;
+  color: #fff;
+}
+.pfx-r-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #696763;
+}
+.pfx-r-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f3eee2;
+  color: #51504d;
+  font-size: 12px;
+  font-weight: 600;
+}
+.pfx-result button.pfx-r-x {
+  margin: 0 0 0 auto;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #696763;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+.pfx-result button.pfx-r-x:hover {
+  background: #f3eee2;
+}
+.pfx-r-amt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 12px;
+  padding: 2px 20px 0;
+}
+.pfx-r-num {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.pfx-r-meta {
+  font-size: 13px;
+  color: #51504d;
+}
+.pfx-r-body {
+  padding: 8px 20px 0;
+}
+.pfx-r-body:empty {
+  display: none;
+}
+.pfx-r-foot {
+  margin-top: 12px;
+  padding: 10px 20px;
+  border-top: 1px solid #f3eee2;
+  font-size: 11px;
+  text-wrap: balance;
+  color: #696763;
+}
+
+/* The retailer's own element that the result is about. */
+/* Drawn just inside its edge (following its own corners), so a neighbouring box or a
+   clipping container on the retailer's page can't hide a side of it. */
+.pfx-glow {
+  outline: 2px solid #545bfe;
+  outline-offset: -2px;
+  animation: pfx-glow 1400ms ease-out 2;
+}
+
+@keyframes pfx-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes pfx-ripple {
+  from {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  to {
+    transform: scale(3.4);
+    opacity: 0;
+  }
+}
+@keyframes pfx-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pfx-fadeup {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pfx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes pfx-draw {
+  from {
+    stroke-dashoffset: 26;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes pfx-glow {
+  from {
+    box-shadow: inset 0 0 0 0 rgb(84 91 254 / 35%);
+  }
+  to {
+    box-shadow: inset 0 0 0 14px rgb(84 91 254 / 0%);
+  }
+}
+
+/* Everything still changes state; nothing travels. */
+@media (prefers-reduced-motion: reduce) {
+  .pfx-yn,
+  .pfx-yn *,
+  .pfx-yn::after,
+  #pfx-overlay,
+  #pfx-overlay *,
+  .pfx-result,
+  .pfx-glow {
+    /* biome-ignore lint/complexity/noImportantStyles: overrides every animation above */
+    animation-duration: 1ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: overrides every animation above */
+    animation-iteration-count: 1 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: overrides every transition above */
+    transition-duration: 1ms !important;
+  }
+}
