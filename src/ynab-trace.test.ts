@@ -152,6 +152,35 @@ describe("the refund's original charge and category", () => {
     expect(panelText()).toMatch(/also a \$80\.08 charge on August 23/);
   });
 
+  test("a split charge with one line matching the refund names that line's category", async () => {
+    const split = {
+      category_name: "Split",
+      subtransactions: [
+        { amount: -68640, category_name: "Baby", deleted: false },
+        { amount: -11440, category_name: "Household", deleted: false },
+      ],
+    };
+    const txns = planTxns(byId(AUG_21, split)).filter((t) => t.id !== AUG_23);
+    openYnab(() => ok(txns));
+    await handOver(refundTrace());
+    expect(advice()).toBe("Put $68.64 back in Baby.");
+  });
+
+  test("a split charge with no line matching the refund lists each category", async () => {
+    const split = {
+      category_name: "Split",
+      subtransactions: [
+        { amount: -50000, category_name: "Baby", deleted: false },
+        { amount: -30080, category_name: "Household", deleted: false },
+      ],
+    };
+    const txns = planTxns(byId(AUG_21, split)).filter((t) => t.id !== AUG_23);
+    openYnab(() => ok(txns));
+    await handOver(refundTrace());
+    expect(advice()).toMatch(/Baby/);
+    expect(advice()).toMatch(/Household/);
+  });
+
   test("an $80.08 Amazon inflow inside the window is never taken as the charge", async () => {
     const onlyInflow = planTxns().filter((t) => t.id !== AUG_21 && t.id !== AUG_23);
     onlyInflow.push(extraTxn({ date: "2026-08-21", amount: 80080, category_name: "Wrong" }));

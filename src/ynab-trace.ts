@@ -110,12 +110,15 @@ function findCharges(txns: YnabTxn[], c: Trace["charges"][number]) {
 }
 
 // The split line(s) of the original charge that hold the refunded items: a line whose
-// amount is one item's share, or all the refunded items' shares together.
+// amount is one item's share, all the refunded items' shares together, or the refund itself.
 function refundLines(subs: YnabSub[], t: Trace) {
-  const shares = t.itemSets.flatMap((set) => [
-    ...set.map((x) => x.amount),
-    set.reduce((a, x) => a + x.amount, 0),
-  ]);
+  const shares = [
+    t.refund.amount,
+    ...t.itemSets.flatMap((set) => [
+      ...set.map((x) => x.amount),
+      set.reduce((a, x) => a + x.amount, 0),
+    ]),
+  ];
   return subs.filter((s) => shares.some((v) => Math.abs(-s.amount / 10 - v) <= 3));
 }
 
@@ -130,7 +133,7 @@ function describeMatch(
   t: Trace,
   plan: string | undefined,
   other?: Elsewhere,
-): { nodes: HTMLElement[]; cats: string[] } {
+): { nodes: HTMLElement[]; cats: string[]; hits: string[] | null } {
   const [x, alt] = matches;
   if (!x)
     return {
@@ -141,6 +144,7 @@ function describeMatch(
         ),
       ],
       cats: [],
+      hits: [],
     };
   const subs = (x.subtransactions || []).filter((s) => !s.deleted);
   const lines: YnabSub[] = subs.length ? subs : [x];
@@ -178,8 +182,9 @@ function describeMatch(
       ),
     );
     cats.push(...altCats);
+    return { nodes, cats, hits: null };
   }
-  return { nodes, cats };
+  return { nodes, cats, hits: hits.map((s) => realCategory(s.category_name)).filter(Boolean) };
 }
 
 /** A charge's categories: its own, or each split line's. */
@@ -188,11 +193,14 @@ function categoriesOf(x: YnabTxn) {
   return (subs.length ? subs : [x]).map((s) => realCategory(s.category_name)).filter(Boolean);
 }
 
-function categorySummary(cats: string[], t: Trace) {
-  const all = [...new Set(cats)];
+// A split line that matches the refund is the answer, unless lines in different categories
+// do, or a second same-amount charge (null hits) leaves the original in doubt.
+function categorySummary(cats: string[], hits: (string[] | null)[], t: Trace) {
+  const hit = hits.includes(null) ? [] : [...new Set(hits.flat())];
+  const all = hit.length === 1 ? hit : [...new Set(cats)];
   const [one] = all;
   if (!one) return [line("acs-warn", "None of these charges are categorized in YNAB yet.")];
-  if (all.length === 1) return [line("acs-put", `Put ${fmt(t.refund.amount)} back in ${one}`)];
+  if (all.length === 1) return [line("acs-put", `Put ${fmt(t.refund.amount)} back in ${one}.`)];
   return [
     line(
       "acs-put",
@@ -300,6 +308,7 @@ async function fillTrace(body: HTMLElement, t: Trace): Promise<void> {
     ...(found.some((f) => f.matched)
       ? categorySummary(
           found.flatMap((f) => f.cats),
+          found.map((f) => f.hits),
           t,
         )
       : []),
