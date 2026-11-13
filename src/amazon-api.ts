@@ -155,7 +155,7 @@ export type ApiResult<H> =
   | { unusable: true }
   | { aborted: true }
   | { hits: H[] }
-  /** Refused (429) after `checked` transactions. */
+  /** Refused (429, 503) after `checked` transactions. */
   | { throttled: true; checked: number }
   /** No hit: reached the end, went `past` the date, or hit the request `limit`. */
   | { done: true; checked: number; past?: true; limit?: true };
@@ -202,11 +202,19 @@ export async function apiSearch<H>(
       logRequest("api", `not sent: ${errMsg(e)}`);
       return { unusable: true };
     }
-    // A 503 or other error is Amazon holding back as much as a 429 is; scrolling would only add to it.
-    if (!res.ok) {
+    // A 429 or 503 (or other server error) is Amazon holding back; scrolling would only add to it.
+    if (res.status === 429 || res.status >= 500) {
       logRequest("api", res.status);
       return { throttled: true, checked: seen.length };
     }
+    // Turned away (401/403, or sent to sign in) isn't a limit. The page came signed in, so its own
+    // scrolling may still work; the next search tries the service again.
+    if (res.status === 401 || res.status === 403 || res.redirected) {
+      logRequest("api", `${res.status}, not accepted`);
+      return { unusable: true };
+    }
+    // Any other error (400, 404) is this request no longer fitting the service.
+    if (!res.ok) return markUnusable("request not accepted", res.status);
     const json: unknown = await res.json().catch(() => null);
     // "transactionsList" since late 2026; "transactionList" before.
     const list = findKey(json, /^transactions?List$/);

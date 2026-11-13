@@ -15,8 +15,9 @@ export interface LoggedRequest {
   status: number | string;
 }
 
-/** Amazon holding back: a 429, or a 503 or other error, which asking again soon can extend just the same. */
-export const isRefusal = (e: LoggedRequest) => typeof e.status === "number" && e.status >= 400;
+/** Amazon holding back: a 429, or a 503 or other server error, which asking again soon can extend just the same. */
+export const isRefusal = (e: LoggedRequest) =>
+  typeof e.status === "number" && (e.status === 429 || e.status >= 500);
 
 export function requestLog(): LoggedRequest[] {
   try {
