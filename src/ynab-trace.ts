@@ -7,7 +7,7 @@ import {
   GM_setValue,
   GM_xmlhttpRequest,
 } from "$";
-import { DAY, toDay } from "./dates.ts";
+import { DAY, readableDates, toDay } from "./dates.ts";
 import { $$, el, esc, line } from "./lib/dom.ts";
 import { errMsg } from "./lib/errors.ts";
 import { fmt } from "./lib/money.ts";
@@ -136,7 +136,7 @@ function describeMatch(
     el(
       "div",
       null,
-      `<b>${fmt(c.amount)}</b> on ${esc(x.date)} · ${account}${subs.length ? " · split" : ""}`,
+      `<b>${fmt(c.amount)}</b> on ${esc(readableDates([x.date]))} · ${account}${subs.length ? " · split" : ""}`,
     ),
   );
   const rows = lines
@@ -151,7 +151,7 @@ function describeMatch(
     nodes.push(
       line(
         "acs-warn",
-        `There's also a ${fmt(c.amount)} charge on ${alt.date} in ${alt.category_name || "no category"}. If that's the one, use it instead.`,
+        `There's also a ${fmt(c.amount)} charge on ${readableDates([alt.date])} in ${alt.category_name || "no category"}. If that's the one, use it instead.`,
       ),
     );
   return {
