@@ -10,7 +10,9 @@ export function cents(s: unknown): number | null {
   const v = Math.round(parseFloat(digits) * 100);
   return m[1] === "-" || m[1] === "−" ? -v : v;
 }
-export const fmt = (c: number) => `${c < 0 ? "-" : ""}$${(Math.abs(c) / 100).toFixed(2)}`;
+// With thousands separators, the way Amazon and YNAB write amounts.
+export const fmt = (c: number) =>
+  `${c < 0 ? "-" : ""}$${(Math.abs(c) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 /** Split `total` cents across `weights` proportionally; result sums exactly to total. */
 export function allocate(total: number, weights: number[]): number[] {
